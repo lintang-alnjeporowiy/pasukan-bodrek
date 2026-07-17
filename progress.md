@@ -56,11 +56,12 @@ Known Issues:
 
 # Phase 3 — Planning System Definition
 
-- [ ] Step 3.1 — Commodity Master Data
-- [ ] Step 3.2 — Tenant
-- [ ] Step 3.3 — Inbound Cargo Flow
-- [ ] Step 3.4 — Demand Projection
-- [ ] Step 3.5 — Demand Projection UI
+- [x] Step 3.1 — Scenario List
+- [ ] Step 3.2 — Commodity Master Data
+- [ ] Step 3.3 — Tenant
+- [ ] Step 3.4 — Inbound Cargo Flow
+- [ ] Step 3.5 — Demand Projection
+- [ ] Step 3.6 — Demand Projection UI
 
 ## Milestone B
 
