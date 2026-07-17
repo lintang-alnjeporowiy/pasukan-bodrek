@@ -47,3 +47,14 @@ def list_scenarios_by_project(project_id: UUID, db: Session = Depends(get_db)):
             detail="Project not found"
         )
     return service.list_scenarios_by_project(project_id)
+
+@router.delete("/scenarios/{scenario_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_scenario(scenario_id: UUID, db: Session = Depends(get_db)):
+    """Delete a scenario."""
+    service = ScenarioService(db)
+    if not service.delete_scenario(scenario_id):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scenario not found"
+        )
+

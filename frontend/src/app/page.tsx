@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
 
 interface Project {
   id: string;
@@ -14,7 +16,9 @@ interface Project {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
+
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [healthStatus, setHealthStatus] = useState<"checking" | "connected" | "disconnected">("checking");
@@ -447,7 +451,7 @@ export default function Home() {
                   </div>
                   
                   <button
-                    onClick={() => showToast(`Membuka proyek "${project.name}"...`)}
+                    onClick={() => router.push(`/projects/${project.id}`)}
                     className="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-cyan-500/30 hover:bg-slate-800/50 text-slate-300 hover:text-cyan-400 transition duration-300 flex items-center justify-center gap-2 group-hover:border-slate-700"
                   >
                     <span>Buka Proyek</span>
