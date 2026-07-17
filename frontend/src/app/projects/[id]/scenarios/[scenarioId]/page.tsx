@@ -54,6 +54,9 @@ export default function ScenarioWorkspace({
   const [updating, setUpdating] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Scenario Lifecycle Modal State
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState<boolean>(false);
+
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -124,6 +127,11 @@ export default function ScenarioWorkspace({
       const updatedScenario = await res.json();
       setScenario(updatedScenario);
       showToast(`Status skenario diubah menjadi "${newStatus}".`);
+      
+      // If we archive, ensure editing is closed
+      if (newStatus === "ARCHIVED") {
+        setIsEditing(false);
+      }
     } catch (err: any) {
       showToast("Gagal memperbarui status.");
     }
@@ -131,6 +139,11 @@ export default function ScenarioWorkspace({
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (scenario?.status === "ARCHIVED") {
+      setValidationError("Skenario yang telah diarsipkan tidak dapat diedit.");
+      return;
+    }
+
     setValidationError(null);
 
     // Client-side validations
@@ -282,6 +295,44 @@ export default function ScenarioWorkspace({
         </div>
       )}
 
+      {/* Archive Confirmation Modal Overlay */}
+      {showArchiveConfirm && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-6">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl flex items-center justify-center flex-shrink-0 text-lg font-bold">
+                !
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-bold text-slate-100">Arsipkan Skenario?</h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  Apakah Anda yakin ingin mengarsipkan skenario <strong>"{scenario?.name}"</strong>? Setelah diarsipkan, skenario akan terkunci secara permanen menjadi read-only dan tidak dapat diedit kembali.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowArchiveConfirm(false)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  setShowArchiveConfirm(false);
+                  await handleUpdateStatus("ARCHIVED");
+                }}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 text-slate-100 hover:bg-rose-500 transition"
+              >
+                Ya, Arsipkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace Layout with Sidebar Navigation */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8 z-10">
         {/* Sidebar Nav */}
@@ -351,6 +402,8 @@ export default function ScenarioWorkspace({
                               <span className={`px-2.5 py-0.5 rounded text-xs font-semibold ${
                                 scenario?.status === "READY"
                                   ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
+                                  : scenario?.status === "ARCHIVED"
+                                  ? "bg-slate-900 text-slate-400 border border-slate-800"
                                   : "bg-amber-950/30 text-amber-400 border border-amber-900/50"
                               }`}>
                                 {scenario?.status}
@@ -362,35 +415,49 @@ export default function ScenarioWorkspace({
                           </div>
 
                           <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => setIsEditing(true)}
-                              className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
-                            >
-                              Edit Pengaturan
-                            </button>
-                            <div className="w-[1px] h-6 bg-slate-800 mx-1" />
-                            <button
-                              onClick={() => handleUpdateStatus("DRAFT")}
-                              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                                scenario?.status === "DRAFT"
-                                  ? "bg-amber-950/40 border border-amber-800 text-amber-400 cursor-default"
-                                  : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
-                              }`}
-                              disabled={scenario?.status === "DRAFT"}
-                            >
-                              Draft
-                            </button>
-                            <button
-                              onClick={() => handleUpdateStatus("READY")}
-                              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                                scenario?.status === "READY"
-                                  ? "bg-emerald-950/40 border border-emerald-800 text-emerald-400 cursor-default"
-                                  : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
-                              }`}
-                              disabled={scenario?.status === "READY"}
-                            >
-                              Ready
-                            </button>
+                            {scenario?.status !== "ARCHIVED" ? (
+                              <>
+                                <button
+                                  onClick={() => setIsEditing(true)}
+                                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                                >
+                                  Edit Pengaturan
+                                </button>
+                                <div className="w-[1px] h-6 bg-slate-800 mx-1" />
+                                
+                                {scenario?.status === "DRAFT" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus("READY")}
+                                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
+                                  >
+                                    Set Ready
+                                  </button>
+                                )}
+
+                                {scenario?.status === "READY" && (
+                                  <button
+                                    onClick={() => handleUpdateStatus("DRAFT")}
+                                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition"
+                                  >
+                                    Set Draft
+                                  </button>
+                                )}
+
+                                <button
+                                  onClick={() => setShowArchiveConfirm(true)}
+                                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-rose-950/30 border border-rose-900/50 text-rose-400 hover:bg-rose-900/50 transition"
+                                >
+                                  Arsipkan
+                                </button>
+                              </>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-slate-500 text-xs font-semibold bg-slate-900/60 border border-slate-800 px-3 py-1.5 rounded-xl">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-3.5 h-3.5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                                </svg>
+                                Terkunci (Archived)
+                              </div>
+                            )}
                           </div>
                         </div>
 
