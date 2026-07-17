@@ -556,18 +556,10 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
 
                           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                             <button
-                              onClick={() => {
-                                setActiveScenario(scenario);
-                                showToast(`Skenario "${scenario.name}" diaktifkan.`);
-                              }}
-                              className={`px-4 py-2 rounded-xl text-xs font-semibold transition duration-200 flex items-center justify-center gap-1 ${
-                                isActive
-                                  ? "bg-cyan-950 border border-cyan-800 text-cyan-400 cursor-default"
-                                  : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300"
-                              }`}
-                              disabled={isActive}
+                              onClick={() => router.push(`/projects/${projectId}/scenarios/${scenario.id}`)}
+                              className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-cyan-500/30 hover:bg-slate-800/50 text-slate-300 hover:text-cyan-400 transition duration-300 flex items-center justify-center gap-1"
                             >
-                              {isActive ? "Aktif" : "Buka"}
+                              Buka
                             </button>
 
                             <button

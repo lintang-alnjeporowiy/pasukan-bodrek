@@ -58,11 +58,12 @@ Known Issues:
 
 - [x] Step 3.1 — Scenario List
 - [x] Step 3.2 — Create Scenario
-- [ ] Step 3.3 — Commodity Master Data
-- [ ] Step 3.4 — Tenant
-- [ ] Step 3.5 — Inbound Cargo Flow
-- [ ] Step 3.6 — Demand Projection
-- [ ] Step 3.7 — Demand Projection UI
+- [x] Step 3.3 — Scenario Workspace
+- [ ] Step 3.4 — Commodity Master Data
+- [ ] Step 3.5 — Tenant
+- [ ] Step 3.6 — Inbound Cargo Flow
+- [ ] Step 3.7 — Demand Projection
+- [ ] Step 3.8 — Demand Projection UI
 
 ## Milestone B
 
