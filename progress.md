@@ -45,7 +45,7 @@ Known Issues:
 # Phase 2 — First Visible Vertical Slice
 
 - [x] Step 2.1 — Project List Page
-- [ ] Step 2.2 — New Project Form
+- [x] Step 2.2 — New Project Form
 
 ## Milestone A
 
