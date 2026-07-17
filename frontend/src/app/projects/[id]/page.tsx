@@ -40,14 +40,29 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>("overview");
 
-  // For New Scenario Toast/Modal
+  // Create Scenario Form States
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
+  const [newScenarioName, setNewScenarioName] = useState<string>("");
+  const [newScenarioDescription, setNewScenarioDescription] = useState<string>("");
+  const [newScenarioParentId, setNewScenarioParentId] = useState<string>("");
+  const [formErrors, setFormErrors] = useState<{ name?: string }>({});
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
       setToastMessage(null);
     }, 3000);
+  };
+
+  const handleOpenCreateModal = () => {
+    setNewScenarioName("");
+    setNewScenarioDescription("");
+    setNewScenarioParentId("");
+    setFormErrors({});
+    setSubmitError(null);
+    setShowCreateModal(true);
   };
 
   const fetchData = async () => {
@@ -86,6 +101,61 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
   useEffect(() => {
     fetchData();
   }, [projectId]);
+
+  const handleCreateScenario = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Client-side validation
+    if (!newScenarioName.trim()) {
+      setFormErrors({ name: "Nama skenario wajib diisi." });
+      return;
+    }
+    if (newScenarioName.length > 255) {
+      setFormErrors({ name: "Nama skenario tidak boleh melebihi 255 karakter." });
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+
+    const payload = {
+      project_id: projectId,
+      parent_scenario_id: newScenarioParentId || null,
+      name: newScenarioName.trim(),
+      description: newScenarioDescription.trim() || null,
+      status: "DRAFT", // Default status is DRAFT
+    };
+
+    try {
+      const res = await fetch("http://localhost:8000/scenarios", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.detail || "Gagal menyimpan skenario.");
+      }
+
+      const created = await res.json();
+      showToast(`Skenario "${created.name}" berhasil dibuat.`);
+      setShowCreateModal(false);
+
+      // Refresh list
+      const scenarioRes = await fetch(`http://localhost:8000/projects/${projectId}/scenarios`, { cache: "no-store" });
+      if (scenarioRes.ok) {
+        const scenarioData = await scenarioRes.json();
+        setScenarios(scenarioData);
+        // Automatically activate the newly created scenario
+        setActiveScenario(created);
+      }
+    } catch (err: any) {
+      setSubmitError(err.message || "Terjadi kesalahan saat menghubungi server.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleDeleteScenario = async (scenarioId: string, scenarioName: string) => {
     if (!confirm(`Apakah Anda yakin ingin menghapus skenario "${scenarioName}"?`)) {
@@ -192,22 +262,110 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
         </div>
       )}
 
-      {/* Modal Dialog Placeholder for New Scenario */}
+      {/* Modal Dialog for New Scenario */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto">
           <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-md p-6 md:p-8 shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
-            <h2 className="text-xl font-bold text-slate-100 mb-2">Buat Skenario Baru</h2>
-            <p className="text-slate-400 text-sm leading-relaxed mb-6">
-              Formulir pembuatan skenario baru akan diimplementasikan pada tahap berikutnya (Langkah 3.2+).
-            </p>
-            <div className="flex justify-end pt-4 border-t border-slate-800">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-slate-100">Buat Skenario Baru</h2>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium bg-cyan-500 hover:bg-cyan-400 text-slate-950 transition duration-200 active:scale-95"
+                className="text-slate-500 hover:text-slate-300 transition"
               >
-                Paham
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
             </div>
+
+            {submitError && (
+              <div className="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs leading-relaxed">
+                {submitError}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateScenario} className="space-y-5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Nama Skenario <span className="text-cyan-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Optimasi Alternatif A"
+                  value={newScenarioName}
+                  onChange={(e) => {
+                    setNewScenarioName(e.target.value);
+                    if (formErrors.name) setFormErrors({ ...formErrors, name: undefined });
+                  }}
+                  className={`w-full px-4 py-3 rounded-xl bg-slate-950/60 border text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition ${
+                    formErrors.name ? "border-rose-500/60 focus:ring-rose-500/30" : "border-slate-800"
+                  }`}
+                  disabled={submitting}
+                />
+                {formErrors.name && (
+                  <p className="text-rose-500 text-xs mt-1.5">{formErrors.name}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Deskripsi Skenario
+                </label>
+                <textarea
+                  placeholder="Jelaskan asumsi atau tujuan dari skenario ini..."
+                  value={newScenarioDescription}
+                  onChange={(e) => setNewScenarioDescription(e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm font-medium placeholder-slate-600 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition resize-none"
+                  disabled={submitting}
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Skenario Induk (Opsional)
+                </label>
+                <select
+                  value={newScenarioParentId}
+                  onChange={(e) => setNewScenarioParentId(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-200 text-sm font-medium focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition appearance-none cursor-pointer"
+                  disabled={submitting}
+                >
+                  <option value="">-- Tanpa Induk (Mulai dari Nol) --</option>
+                  {scenarios.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="pt-4 border-t border-slate-800 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-800/50 border border-slate-800 hover:bg-slate-800 text-slate-300 transition duration-200 active:scale-95"
+                  disabled={submitting}
+                >
+                  Batal
+                </button>
+                
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 rounded-xl text-sm font-medium bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition duration-200 shadow-lg shadow-cyan-500/10 active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                  disabled={submitting}
+                >
+                  {submitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-slate-950/20 border-t-slate-950 rounded-full animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    "Simpan Skenario"
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -321,7 +479,7 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
                   </div>
 
                   <button
-                    onClick={() => setShowCreateModal(true)}
+                    onClick={handleOpenCreateModal}
                     className="px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 transition duration-200 active:scale-95 flex items-center gap-1.5"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
@@ -345,7 +503,7 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
                       Skenario mewakili alternatif parameter peramalan dan alokasi. Buat skenario pertama Anda untuk memulai simulasi.
                     </p>
                     <button
-                      onClick={() => setShowCreateModal(true)}
+                      onClick={handleOpenCreateModal}
                       className="px-4 py-2.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition duration-200 active:scale-95"
                     >
                       Buat Skenario
@@ -388,7 +546,9 @@ export default function ProjectWorkspace({ params }: { params: Promise<{ id: str
                               {scenario.parent_scenario_id && (
                                 <div className="flex items-center gap-1">
                                   <span className="w-1.5 h-1.5 rounded-full bg-slate-700" />
-                                  <span>Turunan: ID {scenario.parent_scenario_id.slice(0, 8)}...</span>
+                                  <span>Turunan: {
+                                    scenarios.find(s => s.id === scenario.parent_scenario_id)?.name || `ID ${scenario.parent_scenario_id.slice(0, 8)}...`
+                                  }</span>
                                 </div>
                               )}
                             </div>
