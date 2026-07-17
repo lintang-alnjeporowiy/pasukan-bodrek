@@ -8,6 +8,7 @@ from alembic import context
 # Import project settings and metadata base
 from src.config import settings
 from src.infrastructure.database import Base
+import src.infrastructure.database.models  # Register all database models
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

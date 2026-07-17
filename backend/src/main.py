@@ -17,6 +17,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from src.api.routes import project_router
+app.include_router(project_router)
+
 @app.get("/health")
 def health_check():
     db_connected = check_database_connection()

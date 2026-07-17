@@ -37,7 +37,7 @@ Known Issues:
 
 - [x] Step 1.1 — Database Connection
 - [x] Step 1.2 — Migration System
-- [ ] Step 1.3 — Project Entity
+- [x] Step 1.3 — Project Entity
 - [ ] Step 1.4 — Scenario Entity
 
 ---
