@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from src.infrastructure.database import check_database_connection
 
 app = FastAPI(
     title="Maritime Transportation & Port Planning API",
@@ -18,4 +19,8 @@ app.add_middleware(
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok"}
+    db_connected = check_database_connection()
+    if not db_connected:
+        raise HTTPException(status_code=503, detail="Database connection is unavailable")
+    return {"status": "ok", "database": "connected"}
+
