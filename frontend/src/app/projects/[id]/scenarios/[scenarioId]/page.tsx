@@ -45,6 +45,15 @@ export default function ScenarioWorkspace({
   const [activeTab, setActiveTab] = useState<string>("overview");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Scenario Settings Edit States
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [editName, setEditName] = useState<string>("");
+  const [editDescription, setEditDescription] = useState<string>("");
+  const [editBaseYear, setEditBaseYear] = useState<number>(2026);
+  const [editPlanningHorizon, setEditPlanningHorizon] = useState<number>(20);
+  const [updating, setUpdating] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -63,6 +72,8 @@ export default function ScenarioWorkspace({
       }
       const projectData = await projectRes.json();
       setProject(projectData);
+      setEditBaseYear(projectData.base_year);
+      setEditPlanningHorizon(projectData.planning_horizon);
 
       // 2. Fetch scenario details
       const scenarioRes = await fetch(`http://localhost:8000/scenarios/${scenarioId}`, { cache: "no-store" });
@@ -71,6 +82,8 @@ export default function ScenarioWorkspace({
       }
       const scenarioData = await scenarioRes.json();
       setScenario(scenarioData);
+      setEditName(scenarioData.name);
+      setEditDescription(scenarioData.description || "");
 
       // 3. Fetch parent scenario if exists
       if (scenarioData.parent_scenario_id) {
@@ -78,7 +91,11 @@ export default function ScenarioWorkspace({
         if (parentRes.ok) {
           const parentData = await parentRes.json();
           setParentScenario(parentData);
+        } else {
+          setParentScenario(null);
         }
+      } else {
+        setParentScenario(null);
       }
       setHealthStatus("connected");
     } catch (err: any) {
@@ -96,15 +113,96 @@ export default function ScenarioWorkspace({
   const handleUpdateStatus = async (newStatus: string) => {
     if (!scenario) return;
     try {
-      // API patch or put logic for scenario update.
-      // Since backend has POST/GET/DELETE, let's mock local state update if needed or check if endpoint supports it.
-      // Let's perform a local status swap to make UI responsive, showing a premium feel.
-      const updatedScenario = { ...scenario, status: newStatus };
+      const res = await fetch(`http://localhost:8000/scenarios/${scenarioId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) {
+        throw new Error("Gagal memperbarui status di server.");
+      }
+      const updatedScenario = await res.json();
       setScenario(updatedScenario);
       showToast(`Status skenario diubah menjadi "${newStatus}".`);
     } catch (err: any) {
       showToast("Gagal memperbarui status.");
     }
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setValidationError(null);
+
+    // Client-side validations
+    if (!editName.trim()) {
+      setValidationError("Nama skenario wajib diisi.");
+      return;
+    }
+    if (editName.length > 255) {
+      setValidationError("Nama skenario maksimal 255 karakter.");
+      return;
+    }
+    if (editBaseYear < 2000 || editBaseYear > 2100) {
+      setValidationError("Tahun mulai harus berada di antara tahun 2000 dan 2100.");
+      return;
+    }
+    if (editPlanningHorizon < 1 || editPlanningHorizon > 100) {
+      setValidationError("Planning horizon harus berada di antara 1 dan 100 tahun.");
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      // 1. Update Scenario details
+      const scenarioPromise = fetch(`http://localhost:8000/scenarios/${scenarioId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          description: editDescription.trim(),
+        }),
+      });
+
+      // 2. Update Project details (Base Year, Planning Horizon)
+      const projectPromise = fetch(`http://localhost:8000/projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base_year: editBaseYear,
+          planning_horizon: editPlanningHorizon,
+        }),
+      });
+
+      const [scenarioRes, projectRes] = await Promise.all([scenarioPromise, projectPromise]);
+
+      if (!scenarioRes.ok) {
+        const errData = await scenarioRes.json();
+        throw new Error(errData.detail || "Gagal memperbarui detail skenario.");
+      }
+      if (!projectRes.ok) {
+        const errData = await projectRes.json();
+        throw new Error(errData.detail || "Gagal memperbarui parameter proyek.");
+      }
+
+      showToast("Pengaturan skenario berhasil disimpan.");
+      setIsEditing(false);
+      await fetchData();
+    } catch (err: any) {
+      setValidationError(err.message || "Terjadi kesalahan saat menyimpan pengaturan.");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    if (scenario && project) {
+      setEditName(scenario.name);
+      setEditDescription(scenario.description || "");
+      setEditBaseYear(project.base_year);
+      setEditPlanningHorizon(project.planning_horizon);
+    }
+    setValidationError(null);
+    setIsEditing(false);
   };
 
   const formatDate = (dateStr: string) => {
@@ -132,6 +230,8 @@ export default function ScenarioWorkspace({
     { id: "calculation", label: "Calculation", icon: "M15.75 15.75V18m-3-9h.008v.008H12.75V9" },
     { id: "results", label: "Results", icon: "M3.75 3v16.5M21 19.5H3.75M6.75 15" },
   ];
+
+  const endYear = (project?.base_year || 0) + (project?.planning_horizon || 0);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between font-sans selection:bg-cyan-500 selection:text-slate-950 relative overflow-hidden">
@@ -241,104 +341,235 @@ export default function ScenarioWorkspace({
                   <div className="bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
                     
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-3">
-                          <h2 className="text-2xl font-bold text-slate-100">{scenario?.name}</h2>
-                          <span className={`px-2.5 py-0.5 rounded text-xs font-semibold ${
-                            scenario?.status === "READY"
-                              ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
-                              : "bg-amber-950/30 text-amber-400 border border-amber-900/50"
-                          }`}>
-                            {scenario?.status}
-                          </span>
+                    {!isEditing ? (
+                      /* VIEW MODE */
+                      <>
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-3">
+                              <h2 className="text-2xl font-bold text-slate-100">{scenario?.name}</h2>
+                              <span className={`px-2.5 py-0.5 rounded text-xs font-semibold ${
+                                scenario?.status === "READY"
+                                  ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
+                                  : "bg-amber-950/30 text-amber-400 border border-amber-900/50"
+                              }`}>
+                                {scenario?.status}
+                              </span>
+                            </div>
+                            <p className="text-slate-400 text-sm max-w-xl">
+                              {scenario?.description || "Tidak ada deskripsi skenario."}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => setIsEditing(true)}
+                              className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                            >
+                              Edit Pengaturan
+                            </button>
+                            <div className="w-[1px] h-6 bg-slate-800 mx-1" />
+                            <button
+                              onClick={() => handleUpdateStatus("DRAFT")}
+                              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+                                scenario?.status === "DRAFT"
+                                  ? "bg-amber-950/40 border border-amber-800 text-amber-400 cursor-default"
+                                  : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
+                              }`}
+                              disabled={scenario?.status === "DRAFT"}
+                            >
+                              Draft
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus("READY")}
+                              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
+                                scenario?.status === "READY"
+                                  ? "bg-emerald-950/40 border border-emerald-800 text-emerald-400 cursor-default"
+                                  : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
+                              }`}
+                              disabled={scenario?.status === "READY"}
+                            >
+                              Ready
+                            </button>
+                          </div>
                         </div>
-                        <p className="text-slate-400 text-sm max-w-xl">
-                          {scenario?.description || "Tidak ada deskripsi skenario."}
-                        </p>
-                      </div>
 
-                      {/* Status Toggle Actions */}
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleUpdateStatus("DRAFT")}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                            scenario?.status === "DRAFT"
-                              ? "bg-amber-950/40 border border-amber-800 text-amber-400 cursor-default"
-                              : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
-                          }`}
-                          disabled={scenario?.status === "DRAFT"}
-                        >
-                          Draft
-                        </button>
-                        <button
-                          onClick={() => handleUpdateStatus("READY")}
-                          className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition ${
-                            scenario?.status === "READY"
-                              ? "bg-emerald-950/40 border border-emerald-800 text-emerald-400 cursor-default"
-                              : "bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-200"
-                          }`}
-                          disabled={scenario?.status === "READY"}
-                        >
-                          Ready
-                        </button>
-                      </div>
-                    </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-900 text-sm">
+                          <div className="space-y-3">
+                            <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                              Detail Parameter Analisis
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Skenario ID</span>
+                                <span className="font-mono text-slate-300 text-xs">{scenario?.id}</span>
+                              </div>
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Dibuat Pada</span>
+                                <span className="text-slate-300">{formatDate(scenario?.created_at || "")}</span>
+                              </div>
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Skenario Induk</span>
+                                <span className="text-slate-300">
+                                  {parentScenario ? (
+                                    <Link 
+                                      href={`/projects/${projectId}/scenarios/${parentScenario.id}`}
+                                      className="text-cyan-400 hover:underline"
+                                    >
+                                      {parentScenario.name}
+                                    </Link>
+                                  ) : (
+                                    "None (Root)"
+                                  )}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-900 text-sm">
-                      <div className="space-y-3">
-                        <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider">
-                          Detail Parameter Analisis
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Skenario ID</span>
-                            <span className="font-mono text-slate-300 text-xs">{scenario?.id}</span>
+                          <div className="space-y-3">
+                            <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider">
+                              Asosiasi Proyek
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Nama Proyek</span>
+                                <span className="text-slate-300 font-medium">{project?.name}</span>
+                              </div>
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Tahun Mulai (Start)</span>
+                                <span className="text-slate-300 font-mono">{project?.base_year}</span>
+                              </div>
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Planning Horizon</span>
+                                <span className="text-slate-300 font-mono">{project?.planning_horizon} tahun</span>
+                              </div>
+                              <div className="flex justify-between py-1 border-b border-slate-900">
+                                <span className="text-slate-500">Tahun Selesai (End)</span>
+                                <span className="text-slate-300 font-mono">{endYear}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Dibuat Pada</span>
-                            <span className="text-slate-300">{formatDate(scenario?.created_at || "")}</span>
+                        </div>
+                      </>
+                    ) : (
+                      /* EDIT MODE FORM */
+                      <form onSubmit={handleSaveSettings} className="space-y-6">
+                        <div className="flex justify-between items-center border-b border-slate-900 pb-4">
+                          <div>
+                            <h3 className="text-lg font-bold text-slate-100">Edit Pengaturan Skenario</h3>
+                            <p className="text-slate-500 text-xs mt-1">Ubah parameter utama analisis skenario dan proyek dasar.</p>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Skenario Induk</span>
-                            <span className="text-slate-300">
-                              {parentScenario ? (
-                                <Link 
-                                  href={`/projects/${projectId}/scenarios/${parentScenario.id}`}
-                                  className="text-cyan-400 hover:underline"
-                                >
-                                  {parentScenario.name}
-                                </Link>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={handleCancelEdit}
+                              className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="submit"
+                              disabled={updating}
+                              className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5 disabled:opacity-50"
+                            >
+                              {updating ? (
+                                <>
+                                  <div className="w-3.5 h-3.5 border-2 border-slate-950/20 border-t-slate-950 rounded-full animate-spin" />
+                                  Menyimpan...
+                                </>
                               ) : (
-                                "None (Root)"
+                                "Simpan Perubahan"
                               )}
-                            </span>
+                            </button>
                           </div>
                         </div>
-                      </div>
 
-                      <div className="space-y-3">
-                        <h4 className="text-slate-400 font-semibold text-xs uppercase tracking-wider">
-                          Asosiasi Proyek
-                        </h4>
-                        <div className="space-y-2">
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Nama Proyek</span>
-                            <span className="text-slate-300 font-medium">{project?.name}</span>
+                        {validationError && (
+                          <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs leading-relaxed">
+                            {validationError}
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Lokasi Studi</span>
-                            <span className="text-slate-300">{project?.location || "-"}</span>
+                        )}
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          {/* Left Column - Scenario Attributes */}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                                Nama Skenario <span className="text-rose-500">*</span>
+                              </label>
+                              <input
+                                type="text"
+                                value={editName}
+                                onChange={(e) => setEditName(e.target.value)}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                                placeholder="Masukkan nama skenario"
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                                Deskripsi Skenario
+                              </label>
+                              <textarea
+                                value={editDescription}
+                                onChange={(e) => setEditDescription(e.target.value)}
+                                rows={4}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition resize-none"
+                                placeholder="Jelaskan karakteristik alternatif skenario..."
+                              />
+                            </div>
                           </div>
-                          <div className="flex justify-between py-1 border-b border-slate-900">
-                            <span className="text-slate-500">Tahun Horizon</span>
-                            <span className="text-slate-300 font-mono">
-                              {project?.base_year} ({project?.planning_horizon} tahun)
-                            </span>
+
+                          {/* Right Column - Project Attributes */}
+                          <div className="space-y-4">
+                            <div>
+                              <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                                Tahun Mulai (Start Year) <span className="text-rose-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={editBaseYear}
+                                onChange={(e) => setEditBaseYear(parseInt(e.target.value) || 0)}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none font-mono transition"
+                                min={2000}
+                                max={2100}
+                                required
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                                Planning Horizon (Tahun) <span className="text-rose-500">*</span>
+                              </label>
+                              <input
+                                type="number"
+                                value={editPlanningHorizon}
+                                onChange={(e) => setEditPlanningHorizon(parseInt(e.target.value) || 0)}
+                                className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none font-mono transition"
+                                min={1}
+                                max={100}
+                                required
+                              />
+                            </div>
+
+                            <div className="bg-slate-950/40 border border-slate-900 rounded-xl p-4 flex items-center justify-between">
+                              <div className="space-y-0.5">
+                                <span className="block text-slate-500 text-[10px] font-semibold uppercase tracking-wider">
+                                  Kalkulasi Tahun Selesai (End Year)
+                                </span>
+                                <span className="text-slate-400 text-xs">
+                                  Tahun Mulai ({editBaseYear}) + Horizon ({editPlanningHorizon})
+                                </span>
+                              </div>
+                              <div className="text-xl font-bold text-cyan-400 font-mono">
+                                {editBaseYear + editPlanningHorizon}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </div>
+                      </form>
+                    )}
                   </div>
 
                   {/* Guide Board Card */}

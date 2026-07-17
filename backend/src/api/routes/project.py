@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from src.infrastructure.database import get_db
-from src.domain.project.models import ProjectCreate, ProjectDomain
+from src.domain.project.models import ProjectCreate, ProjectDomain, ProjectUpdate
 from src.application.project import ProjectService
 
 router = APIRouter(prefix="/projects", tags=["Projects"])
@@ -26,6 +26,18 @@ def get_project(project_id: UUID, db: Session = Depends(get_db)):
     """Get a project by its unique ID."""
     service = ProjectService(db)
     project = service.get_project(project_id)
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found"
+        )
+    return project
+
+@router.patch("/{project_id}", response_model=ProjectDomain)
+def update_project(project_id: UUID, project_in: ProjectUpdate, db: Session = Depends(get_db)):
+    """Update details of a specific project."""
+    service = ProjectService(db)
+    project = service.update_project(project_id, project_in)
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

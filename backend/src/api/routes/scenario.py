@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from src.infrastructure.database import get_db
-from src.domain.scenario.models import ScenarioCreate, ScenarioDomain
+from src.domain.scenario.models import ScenarioCreate, ScenarioDomain, ScenarioUpdate
 from src.application.scenario import ScenarioService
 
 router = APIRouter(tags=["Scenarios"])
@@ -57,4 +57,16 @@ def delete_scenario(scenario_id: UUID, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Scenario not found"
         )
+
+@router.patch("/scenarios/{scenario_id}", response_model=ScenarioDomain)
+def update_scenario(scenario_id: UUID, scenario_in: ScenarioUpdate, db: Session = Depends(get_db)):
+    """Update details of a specific scenario."""
+    service = ScenarioService(db)
+    scenario = service.update_scenario(scenario_id, scenario_in)
+    if not scenario:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Scenario not found"
+        )
+    return scenario
 

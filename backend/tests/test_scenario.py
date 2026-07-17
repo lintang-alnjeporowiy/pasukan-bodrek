@@ -62,10 +62,36 @@ def test_scenario_lifecycle(db_session):
     assert len(list_res) == 1
     assert list_res[0]["id"] == scenario_id
 
-    # 5. Clean up the database records
-    db_scenario = db_session.query(ScenarioModel).filter(ScenarioModel.id == scenario_id).first()
-    if db_scenario:
-        db_session.delete(db_scenario)
+    # 5. Update the scenario details (PATCH)
+    update_data = {
+        "name": "Scenario Baseline Updated",
+        "description": "Baseline scenario description updated",
+        "status": "READY"
+    }
+    patch_response = client.patch(f"/scenarios/{scenario_id}", json=update_data)
+    assert patch_response.status_code == 200
+    patch_res = patch_response.json()
+    assert patch_res["id"] == scenario_id
+    assert patch_res["name"] == "Scenario Baseline Updated"
+    assert patch_res["description"] == "Baseline scenario description updated"
+    assert patch_res["status"] == "READY"
+
+    # Verify update persisted
+    get_response_2 = client.get(f"/scenarios/{scenario_id}")
+    assert get_response_2.status_code == 200
+    get_res_2 = get_response_2.json()
+    assert get_res_2["name"] == "Scenario Baseline Updated"
+
+    # 6. Delete the scenario
+    delete_response = client.delete(f"/scenarios/{scenario_id}")
+    assert delete_response.status_code == 204
+
+    # Verify scenario deleted from project list
+    list_response_2 = client.get(f"/projects/{project_id}/scenarios")
+    assert list_response_2.status_code == 200
+    assert len(list_response_2.json()) == 0
+
+    # 7. Clean up the database project record
     db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
     if db_project:
         db_session.delete(db_project)

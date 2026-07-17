@@ -52,7 +52,26 @@ def test_project_lifecycle(db_session):
     project_ids = [p["id"] for p in list_data]
     assert project_id in project_ids
 
-    # 4. Clean up the database record
+    # 4. Update the project details (PATCH)
+    update_data = {
+        "name": "Test Project Pelabuhan Updated",
+        "base_year": 2028,
+        "planning_horizon": 25
+    }
+    patch_response = client.patch(f"/projects/{project_id}", json=update_data)
+    assert patch_response.status_code == 200
+    patch_data = patch_response.json()
+    assert patch_data["id"] == project_id
+    assert patch_data["name"] == "Test Project Pelabuhan Updated"
+    assert patch_data["base_year"] == 2028
+    assert patch_data["planning_horizon"] == 25
+
+    # Verify update persisted
+    get_response_2 = client.get(f"/projects/{project_id}")
+    assert get_response_2.status_code == 200
+    assert get_response_2.json()["name"] == "Test Project Pelabuhan Updated"
+
+    # 5. Clean up the database record
     db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
     if db_project:
         db_session.delete(db_project)
