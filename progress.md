@@ -46,10 +46,11 @@ Known Issues:
 
 - [x] Step 2.1 — Project List Page
 - [x] Step 2.2 — New Project Form
+- [x] Step 2.3 — Developer Launch Workflow
 
 ## Milestone A
 
-- [ ] User can create and reopen a project from the browser
+- [x] User can create and reopen a project from the browser
 
 ---
 
