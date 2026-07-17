@@ -28,7 +28,7 @@ Known Issues:
 - [x] Step 0.1 — Inspect Repository
 - [x] Step 0.2 — Create Application Skeleton
 - [x] Step 0.3 — Create Nix Development Environment
-- [ ] Step 0.4 — Backend Hello World
+- [x] Step 0.4 — Backend Hello World
 - [ ] Step 0.5 — Frontend Hello World
 
 ---
