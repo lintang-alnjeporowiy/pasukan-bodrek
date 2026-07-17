@@ -25,9 +25,9 @@ Known Issues:
 
 # Phase 0 — Repository Bootstrap
 
-- [ ] Step 0.1 — Inspect Repository
-- [ ] Step 0.2 — Create Application Skeleton
-- [ ] Step 0.3 — Create Nix Development Environment
+- [x] Step 0.1 — Inspect Repository
+- [x] Step 0.2 — Create Application Skeleton
+- [x] Step 0.3 — Create Nix Development Environment
 - [ ] Step 0.4 — Backend Hello World
 - [ ] Step 0.5 — Frontend Hello World
 
