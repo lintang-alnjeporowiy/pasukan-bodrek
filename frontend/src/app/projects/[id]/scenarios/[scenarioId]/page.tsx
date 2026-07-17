@@ -26,6 +26,17 @@ interface Scenario {
   updated_at: string;
 }
 
+interface Commodity {
+  id: string;
+  name: string;
+  code?: string;
+  unit: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ScenarioWorkspace({
   params,
 }: {
@@ -56,6 +67,22 @@ export default function ScenarioWorkspace({
 
   // Scenario Lifecycle Modal State
   const [showArchiveConfirm, setShowArchiveConfirm] = useState<boolean>(false);
+
+  // Cargo Tab Sub-Navigation & Commodities CRUD States
+  const [cargoSubTab, setCargoSubTab] = useState<string>("commodities");
+  const [commodities, setCommodities] = useState<Commodity[]>([]);
+  const [loadingCommodities, setLoadingCommodities] = useState<boolean>(false);
+
+  // Add/Edit Commodity Form States
+  const [isCommodityModalOpen, setIsCommodityModalOpen] = useState<boolean>(false);
+  const [editingCommodity, setEditingCommodity] = useState<Commodity | null>(null);
+  const [commName, setCommName] = useState<string>("");
+  const [commCode, setCommCode] = useState<string>("");
+  const [commUnit, setCommUnit] = useState<string>("Ton");
+  const [commDesc, setCommDesc] = useState<string>("");
+  const [commActive, setCommActive] = useState<boolean>(true);
+  const [commError, setCommError] = useState<string | null>(null);
+  const [commSaving, setCommSaving] = useState<boolean>(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -109,9 +136,30 @@ export default function ScenarioWorkspace({
     }
   };
 
+  const fetchCommodities = async () => {
+    setLoadingCommodities(true);
+    try {
+      const res = await fetch("http://localhost:8000/commodities", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setCommodities(data);
+      }
+    } catch (err) {
+      console.error("Gagal memuat komoditas", err);
+    } finally {
+      setLoadingCommodities(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [projectId, scenarioId]);
+
+  useEffect(() => {
+    if (activeTab === "cargo" && cargoSubTab === "commodities") {
+      fetchCommodities();
+    }
+  }, [activeTab, cargoSubTab]);
 
   const handleUpdateStatus = async (newStatus: string) => {
     if (!scenario) return;
@@ -216,6 +264,102 @@ export default function ScenarioWorkspace({
     }
     setValidationError(null);
     setIsEditing(false);
+  };
+
+  // Commodity Actions
+  const handleOpenAddCommodity = () => {
+    setEditingCommodity(null);
+    setCommName("");
+    setCommCode("");
+    setCommUnit("Ton");
+    setCommDesc("");
+    setCommActive(true);
+    setCommError(null);
+    setIsCommodityModalOpen(true);
+  };
+
+  const handleOpenEditCommodity = (comm: Commodity) => {
+    setEditingCommodity(comm);
+    setCommName(comm.name);
+    setCommCode(comm.code || "");
+    setCommUnit(comm.unit);
+    setCommDesc(comm.description || "");
+    setCommActive(comm.is_active);
+    setCommError(null);
+    setIsCommodityModalOpen(true);
+  };
+
+  const handleSaveCommodity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCommError(null);
+
+    if (!commName.trim()) {
+      setCommError("Nama komoditas wajib diisi.");
+      return;
+    }
+    if (!commUnit.trim()) {
+      setCommError("Satuan wajib diisi.");
+      return;
+    }
+
+    setCommSaving(true);
+    try {
+      const payload = {
+        name: commName.trim(),
+        code: commCode.trim() || null,
+        unit: commUnit.trim(),
+        description: commDesc.trim() || null,
+        is_active: commActive,
+      };
+
+      let res;
+      if (editingCommodity) {
+        res = await fetch(`http://localhost:8000/commodities/${editingCommodity.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch("http://localhost:8000/commodities", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Gagal menyimpan komoditas.");
+      }
+
+      showToast(editingCommodity ? "Komoditas berhasil diperbarui." : "Komoditas baru berhasil ditambahkan.");
+      setIsCommodityModalOpen(false);
+      fetchCommodities();
+    } catch (err: any) {
+      setCommError(err.message || "Terjadi kesalahan saat menyimpan komoditas.");
+    } finally {
+      setCommSaving(false);
+    }
+  };
+
+  const handleDeleteCommodity = async (id: string, name: string) => {
+    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus komoditas "${name}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/commodities/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Komoditas berhasil dihapus.");
+        fetchCommodities();
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Gagal menghapus komoditas.");
+      }
+    } catch (err) {
+      showToast("Gagal menghapus komoditas.");
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -329,6 +473,123 @@ export default function ScenarioWorkspace({
                 Ya, Arsipkan
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Commodity Modal Overlay */}
+      {isCommodityModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div>
+              <h3 className="text-lg font-bold text-slate-100">
+                {editingCommodity ? "Edit Komoditas" : "Tambah Komoditas Baru"}
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">
+                Definisikan entitas komoditas global untuk perencanaan kargo.
+              </p>
+            </div>
+
+            {commError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs">
+                {commError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCommodity} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Nama Komoditas <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={commName}
+                    onChange={(e) => setCommName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    placeholder="Contoh: Coal, CPO, HSD"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Kode Komoditas
+                  </label>
+                  <input
+                    type="text"
+                    value={commCode}
+                    onChange={(e) => setCommCode(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    placeholder="Contoh: C-COAL"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Satuan (Unit) <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={commUnit}
+                    onChange={(e) => setCommUnit(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                  >
+                    <option value="Ton">Ton</option>
+                    <option value="TEU">TEU</option>
+                    <option value="KL">KL</option>
+                    <option value="M3">M3 (Cubic Meter)</option>
+                    <option value="Box">Box</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
+                  <div className="space-y-0.5">
+                    <span className="block text-slate-300 text-xs font-medium">Status Aktif</span>
+                    <span className="text-[10px] text-slate-500">Dapat dipilih pada flows</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={commActive}
+                    onChange={(e) => setCommActive(e.target.checked)}
+                    className="w-4 h-4 rounded text-cyan-500 bg-slate-950 border-slate-800 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                  Deskripsi Komoditas
+                </label>
+                <textarea
+                  value={commDesc}
+                  onChange={(e) => setCommDesc(e.target.value)}
+                  rows={3}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition resize-none"
+                  placeholder="Keterangan fisik, sifat cargo, dll..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCommodityModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={commSaving}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                >
+                  {commSaving ? "Menyimpan..." : "Simpan Data"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -654,8 +915,176 @@ export default function ScenarioWorkspace({
                 </div>
               )}
 
+              {/* Tab: Cargo (Commodity Master Data CRUD) */}
+              {activeTab === "cargo" && (
+                <div className="space-y-6 flex-1 flex flex-col">
+                  {/* Cargo Sub-tabs Navigation */}
+                  <div className="flex border-b border-slate-900 gap-6 pb-2">
+                    <button
+                      onClick={() => setCargoSubTab("commodities")}
+                      className={`text-sm font-semibold pb-2 border-b-2 transition ${
+                        cargoSubTab === "commodities"
+                          ? "border-cyan-400 text-cyan-400"
+                          : "border-transparent text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Commodities (Master)
+                    </button>
+                    <button
+                      onClick={() => setCargoSubTab("tenants")}
+                      className={`text-sm font-semibold pb-2 border-b-2 transition ${
+                        cargoSubTab === "tenants"
+                          ? "border-cyan-400 text-cyan-400"
+                          : "border-transparent text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Tenants
+                    </button>
+                    <button
+                      onClick={() => setCargoSubTab("flows")}
+                      className={`text-sm font-semibold pb-2 border-b-2 transition ${
+                        cargoSubTab === "flows"
+                          ? "border-cyan-400 text-cyan-400"
+                          : "border-transparent text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Cargo Flows
+                    </button>
+                    <button
+                      onClick={() => setCargoSubTab("conversion")}
+                      className={`text-sm font-semibold pb-2 border-b-2 transition ${
+                        cargoSubTab === "conversion"
+                          ? "border-cyan-400 text-cyan-400"
+                          : "border-transparent text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Conversion Rules
+                    </button>
+                  </div>
+
+                  {cargoSubTab === "commodities" ? (
+                    <div className="space-y-6 flex-1 flex flex-col">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm">
+                        <div className="space-y-1">
+                          <h3 className="text-lg font-bold text-slate-100">Daftar Komoditas (Master Data)</h3>
+                          <p className="text-slate-400 text-xs max-w-xl">
+                            Kelola komoditas utama yang dapat digunakan untuk pendefinisian cargo flow di seluruh skenario perencanaan.
+                          </p>
+                        </div>
+                        {scenario?.status !== "ARCHIVED" && (
+                          <button
+                            onClick={handleOpenAddCommodity}
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                          >
+                            + Tambah Komoditas
+                          </button>
+                        )}
+                      </div>
+
+                      {loadingCommodities ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20">
+                          <div className="w-8 h-8 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+                          <p className="text-slate-500 text-xs mt-3">Memuat daftar komoditas...</p>
+                        </div>
+                      ) : commodities.length === 0 ? (
+                        <div className="bg-slate-900/10 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.125a3.375 3.375 0 01-3.375 3.375H7.75a3.375 3.375 0 01-3.375-3.375L3.75 7.5M10 3.75h4" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-200 mb-2">Belum Ada Komoditas</h3>
+                          <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
+                            Tambahkan master komoditas baru (seperti Batubara, HSD, Liquid Bulk, dll.) untuk memulai pendefinisian kargo.
+                          </p>
+                          {scenario?.status !== "ARCHIVED" && (
+                            <button
+                              onClick={handleOpenAddCommodity}
+                              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition duration-200"
+                            >
+                              Tambah Komoditas Pertama
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/50">
+                                <th className="px-6 py-4">Nama Komoditas</th>
+                                <th className="px-6 py-4">Kode</th>
+                                <th className="px-6 py-4">Satuan (Unit)</th>
+                                <th className="px-6 py-4">Deskripsi</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-900 text-sm">
+                              {commodities.map((comm) => (
+                                <tr key={comm.id} className="hover:bg-slate-900/20 transition">
+                                  <td className="px-6 py-4 font-semibold text-slate-200">{comm.name}</td>
+                                  <td className="px-6 py-4 font-mono text-xs text-slate-400">{comm.code || "-"}</td>
+                                  <td className="px-6 py-4 text-slate-300">{comm.unit}</td>
+                                  <td className="px-6 py-4 text-slate-400 max-w-xs truncate">{comm.description || "-"}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                      comm.is_active
+                                        ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
+                                        : "bg-rose-950/30 text-rose-400 border border-rose-900/50"
+                                    }`}>
+                                      {comm.is_active ? "Aktif" : "Nonaktif"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleOpenEditCommodity(comm)}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition"
+                                    >
+                                      Edit
+                                    </button>
+                                    {scenario?.status !== "ARCHIVED" && (
+                                      <button
+                                        onClick={() => handleDeleteCommodity(comm.id, comm.name)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-950/20 transition"
+                                      >
+                                        Hapus
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* Other Sub-Tabs: Tenants, Flows, Conversion Rules Placeholders */
+                    <div className="bg-slate-900/20 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
+                      <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-200 mb-2">
+                        Sub Modul {cargoSubTab.toUpperCase()} Sedang Dikonstruksi
+                      </h3>
+                      <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
+                        Fitur master dan operasional kargo untuk **{cargoSubTab}** akan tersedia pada langkah pengembangan selanjutnya.
+                      </p>
+                      <button
+                        onClick={() => setCargoSubTab("commodities")}
+                        className="px-5 py-2.5 rounded-xl text-sm font-medium bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition duration-200"
+                      >
+                        Kembali ke Commodities (Master)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Placeholder tabs */}
-              {activeTab !== "overview" && (
+              {activeTab !== "overview" && activeTab !== "cargo" && (
                 <div className="bg-slate-900/20 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
                   <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
