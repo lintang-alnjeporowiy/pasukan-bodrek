@@ -23,6 +23,26 @@
             postgresql
             highs
             git
+            playwright
+            chromium
+            nss
+            nspr
+            atk
+            at-spi2-atk
+            gtk3
+            pango
+            cairo
+            libdrm
+            mesa
+            xorg.libX11
+            xorg.libXcomposite
+            xorg.libXdamage
+            xorg.libXext
+            xorg.libXfixes
+            xorg.libXrandr
+            xorg.libxcb
+            xorg.libXi
+            alsa-lib
           ];
 
           shellHook = ''
