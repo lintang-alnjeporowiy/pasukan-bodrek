@@ -4,7 +4,7 @@ from uuid import UUID
 from typing import List
 
 from src.infrastructure.database import get_db
-from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowDomain, CargoFlowUpdate
+from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowDomain, CargoFlowUpdate, ProjectionResult
 from src.application.cargo_flow import CargoFlowService
 
 router = APIRouter(tags=["Cargo Flows"])
@@ -56,3 +56,15 @@ def delete_cargo_flow(cargo_flow_id: UUID, db: Session = Depends(get_db)):
             detail="Cargo flow not found"
         )
     return
+
+@router.get("/cargo-flows/{cargo_flow_id}/projection", response_model=ProjectionResult)
+def get_cargo_flow_projection(cargo_flow_id: UUID, db: Session = Depends(get_db)):
+    """Calculate and return the annual demand projection and trace for a cargo flow."""
+    service = CargoFlowService(db)
+    projection = service.get_cargo_flow_projection(cargo_flow_id)
+    if not projection:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cargo flow not found or project horizon not configured"
+        )
+    return projection

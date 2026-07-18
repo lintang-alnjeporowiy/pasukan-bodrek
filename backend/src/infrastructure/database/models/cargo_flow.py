@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Float, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from src.infrastructure.database.session import Base
@@ -17,6 +17,9 @@ class CargoFlowModel(Base):
     destination_port = Column(String(255), nullable=False)
     base_annual_demand = Column(Float, nullable=False)
     unit = Column(String(50), nullable=False)
+    start_year = Column(Integer, default=1, nullable=False)
+    growth_rate = Column(Float, default=0.01, nullable=False)
+    maximum_demand = Column(Float, default=999999999999.0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)

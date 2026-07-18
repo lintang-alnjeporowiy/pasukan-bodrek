@@ -32,6 +32,9 @@ class CargoFlowRepository:
             destination_port=flow_in.destination_port,
             base_annual_demand=flow_in.base_annual_demand,
             unit=flow_in.unit,
+            start_year=flow_in.start_year,
+            growth_rate=flow_in.growth_rate,
+            maximum_demand=flow_in.maximum_demand,
             is_active=flow_in.is_active
         )
         self.db.add(db_flow)

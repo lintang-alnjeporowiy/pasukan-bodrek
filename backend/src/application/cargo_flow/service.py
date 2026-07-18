@@ -3,7 +3,7 @@ from typing import List, Optional
 from sqlalchemy.orm import Session
 from src.infrastructure.repositories.cargo_flow import CargoFlowRepository
 from src.infrastructure.database.models.cargo_flow import CargoFlowModel
-from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowUpdate, CargoFlowDomain
+from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowUpdate, CargoFlowDomain, ProjectionResult
 
 class CargoFlowService:
     """Application Service to coordinate cargo flow-related workflows."""
@@ -51,3 +51,21 @@ class CargoFlowService:
             return False
         self.repository.delete(db_flow)
         return True
+
+    def get_cargo_flow_projection(self, cargo_flow_id: UUID) -> Optional[ProjectionResult]:
+        """Fetch a cargo flow and calculate its demand projection."""
+        db_flow = self.repository.get_by_id(cargo_flow_id)
+        if not db_flow or not db_flow.scenario or not db_flow.scenario.project:
+            return None
+        
+        project = db_flow.scenario.project
+        from src.application.calculation.demand_projection import DemandProjectionService
+        return DemandProjectionService.calculate_projection(
+            cargo_flow_id=db_flow.id,
+            planning_horizon=project.planning_horizon,
+            start_year=db_flow.start_year,
+            base_year=project.base_year,
+            initial_demand=db_flow.base_annual_demand,
+            growth_rate=db_flow.growth_rate,
+            maximum_demand=db_flow.maximum_demand
+        )

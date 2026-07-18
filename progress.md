@@ -64,7 +64,7 @@ Known Issues:
 - [x] Step 3.6 — Commodity Master Data
 - [x] Step 3.7 — Tenant
 - [x] Step 3.8 — Inbound Cargo Flow
-- [ ] Step 3.9 — Demand Projection
+- [x] Step 3.9 — Demand Projection
 - [ ] Step 3.10 — Demand Projection UI
 
 ## Milestone B
