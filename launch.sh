@@ -18,8 +18,23 @@ NC='\033[0;0m'
 # Utility function to check port status
 is_port_in_use() {
   local port=$1
-  (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1
-  return $?
+  # 1. Try /dev/tcp bash built-in
+  if (echo > /dev/tcp/127.0.0.1/$port) >/dev/null 2>&1; then
+    return 0
+  fi
+  # 2. Try ss tool if available
+  if command -v ss >/dev/null 2>&1; then
+    if ss -tlnp "sport = :$port" 2>/dev/null | grep -q ":$port"; then
+      return 0
+    fi
+  fi
+  # 3. Try nc (netcat) if available
+  if command -v nc >/dev/null 2>&1; then
+    if nc -z 127.0.0.1 $port >/dev/null 2>&1; then
+      return 0
+    fi
+  fi
+  return 1
 }
 
 # Prefix logs helper
@@ -67,12 +82,23 @@ cleanup() {
   
   if [ -n "$FRONTEND_PID" ]; then
     echo "Stopping Frontend (PID $FRONTEND_PID)..."
-    kill "$FRONTEND_PID" 2>/dev/null || true
+    kill -9 "$FRONTEND_PID" 2>/dev/null || true
+    pkill -P "$FRONTEND_PID" 2>/dev/null || true
   fi
 
   if [ -n "$BACKEND_PID" ]; then
     echo "Stopping Backend (PID $BACKEND_PID)..."
-    kill "$BACKEND_PID" 2>/dev/null || true
+    kill -9 "$BACKEND_PID" 2>/dev/null || true
+    pkill -P "$BACKEND_PID" 2>/dev/null || true
+  fi
+
+  # Final cleanup check for ports 8000 and 3000
+  if command -v ss >/dev/null 2>&1; then
+    local pids_8000=$(ss -tlnp "sport = :8000" 2>/dev/null | grep -o -E "pid=[0-9]+" | cut -d= -f2 | sort -u || true)
+    for p in $pids_8000; do kill -9 $p 2>/dev/null || true; done
+    
+    local pids_3000=$(ss -tlnp "sport = :3000" 2>/dev/null | grep -o -E "pid=[0-9]+" | cut -d= -f2 | sort -u || true)
+    for p in $pids_3000; do kill -9 $p 2>/dev/null || true; done
   fi
 
   if [ "$DB_STARTED_BY_US" = true ]; then

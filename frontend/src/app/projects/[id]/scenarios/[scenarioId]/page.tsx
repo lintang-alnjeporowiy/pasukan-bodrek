@@ -174,6 +174,7 @@ export default function ScenarioWorkspace({
   const [projMaxDemand, setProjMaxDemand] = useState<string>("");
   const [projError, setProjError] = useState<string | null>(null);
   const [projSaving, setProjSaving] = useState<boolean>(false);
+  const [expandedTraces, setExpandedTraces] = useState<Record<number, boolean>>({});
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -709,6 +710,7 @@ export default function ScenarioWorkspace({
     setProjMaxDemand(flow.maximum_demand && flow.maximum_demand < 99999999999 ? flow.maximum_demand.toString() : "");
     setProjError(null);
     setProjectionResult(null);
+    setExpandedTraces({});
     setIsProjectionModalOpen(true);
     
     // Fetch projection data
@@ -1030,7 +1032,8 @@ export default function ScenarioWorkspace({
                 <button
                   type="submit"
                   disabled={commSaving}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                 >
                   {commSaving ? "Menyimpan..." : "Simpan Data"}
                 </button>
@@ -1135,7 +1138,8 @@ export default function ScenarioWorkspace({
                 <button
                   type="submit"
                   disabled={tenantSaving}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                 >
                   {tenantSaving ? "Menyimpan..." : "Simpan Data"}
                 </button>
@@ -1350,7 +1354,8 @@ export default function ScenarioWorkspace({
                 <button
                   type="submit"
                   disabled={flowSaving}
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                  style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                 >
                   {flowSaving ? "Menyimpan..." : "Simpan Data"}
                 </button>
@@ -1362,11 +1367,11 @@ export default function ScenarioWorkspace({
 
       {/* Demand Projection Modal Overlay */}
       {isProjectionModalOpen && selectedProjectionFlow && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-4xl w-full p-6 shadow-2xl space-y-6 relative overflow-hidden my-8">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="fixed inset-0 w-screen h-screen bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-[9999] p-6 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-6xl w-full p-8 shadow-2xl space-y-6 relative my-auto flex flex-col">
+            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/5 rounded-full blur-3xl pointer-events-none" />
             
-            <div className="flex justify-between items-start">
+            <div className="flex justify-between items-start border-b border-slate-800 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-100 flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5 text-cyan-400">
@@ -1374,13 +1379,13 @@ export default function ScenarioWorkspace({
                   </svg>
                   Proyeksi Demand: {selectedProjectionFlow.tenant_name} &bull; {selectedProjectionFlow.commodity_name}
                 </h3>
-                <p className="text-slate-500 text-xs mt-1">
-                  Rute: {selectedProjectionFlow.origin} &rarr; {selectedProjectionFlow.destination_port} ({selectedProjectionFlow.unit})
+                <p className="text-slate-400 text-xs mt-1">
+                  Rute Logistik: <span className="font-semibold text-slate-200">{selectedProjectionFlow.origin}</span> &rarr; <span className="font-semibold text-slate-200">{selectedProjectionFlow.destination_port}</span> &bull; Satuan: <span className="text-cyan-400 font-mono">{selectedProjectionFlow.unit}</span>
                 </p>
               </div>
               <button
                 onClick={() => setIsProjectionModalOpen(false)}
-                className="text-slate-400 hover:text-slate-200 transition"
+                className="text-slate-400 hover:text-slate-200 bg-slate-950/60 p-2 rounded-xl border border-slate-800/80 hover:border-slate-700 transition"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -1394,228 +1399,289 @@ export default function ScenarioWorkspace({
               </div>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Parameter Form */}
-              <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 space-y-4">
-                <h4 className="text-sm font-bold text-slate-200 border-b border-slate-800 pb-2">
-                  Parameter Proyeksi
-                </h4>
-                
-                <form onSubmit={handleRunProjection} className="space-y-4">
-                  <div>
-                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
-                      Operation Start Year <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      value={projStartYear}
-                      onChange={(e) => setProjStartYear(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
-                      min={1}
-                      disabled={scenario?.status === "ARCHIVED"}
-                      required
-                    />
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Tahun relatif proyek kargo mulai mengalir (misal: 1, 4, 10).
-                    </span>
-                  </div>
+            <div className="grid grid-cols-1 xl:grid-cols-12 gap-8 items-start">
+              {/* Left Column: Parameter Form & SVG Chart (5/12 cols) */}
+              <div className="xl:col-span-5 space-y-6">
+                {/* Parameter Form */}
+                <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-inner">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider border-b border-slate-900 pb-2">
+                    Parameter Proyeksi
+                  </h4>
+                  
+                  <form onSubmit={handleRunProjection} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
+                          Start Year <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="number"
+                          value={projStartYear}
+                          onChange={(e) => setProjStartYear(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
+                          min={1}
+                          disabled={scenario?.status === "ARCHIVED"}
+                          required
+                        />
+                      </div>
 
-                  <div>
-                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
-                      Base Demand (Initial Volume)
-                    </label>
-                    <input
-                      type="number"
-                      value={selectedProjectionFlow.base_annual_demand}
-                      className="w-full bg-slate-900/45 border border-slate-800/50 rounded-xl px-3 py-2.5 text-xs text-slate-400 outline-none font-mono"
-                      disabled
-                    />
-                    <span className="text-[10px] text-slate-650 block mt-1">
-                      Diubah via Edit Cargo Flow.
-                    </span>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
-                      Growth Rate (% / tahun) <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        value={projGrowthRate}
-                        onChange={(e) => setProjGrowthRate(e.target.value)}
-                        className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl pl-3 pr-8 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
-                        min={0}
-                        step="any"
-                        disabled={scenario?.status === "ARCHIVED"}
-                        required
-                      />
-                      <span className="absolute right-3 top-2.5 text-slate-550 text-xs font-semibold font-mono">%</span>
+                      <div>
+                        <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
+                          Base Demand
+                        </label>
+                        <input
+                          type="number"
+                          value={selectedProjectionFlow.base_annual_demand}
+                          className="w-full bg-slate-900/40 border border-slate-900 rounded-xl px-3 py-2.5 text-xs text-slate-500 outline-none font-mono"
+                          disabled
+                        />
+                      </div>
                     </div>
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Default 1% jika tidak diset.
-                    </span>
-                  </div>
 
-                  <div>
-                    <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
-                      Maximum Demand Cap (Volume)
-                    </label>
-                    <input
-                      type="number"
-                      value={projMaxDemand}
-                      onChange={(e) => setProjMaxDemand(e.target.value)}
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
-                      placeholder="Tidak dibatasi (Uncapped)"
-                      min={0}
-                      disabled={scenario?.status === "ARCHIVED"}
-                      step="any"
-                    />
-                    <span className="text-[10px] text-slate-500 block mt-1">
-                      Batas atas kapasitas maksimum operasional tenant.
-                    </span>
-                  </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
+                          Growth Rate (%/Thn) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            value={projGrowthRate}
+                            onChange={(e) => setProjGrowthRate(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl pl-3 pr-8 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
+                            min={0}
+                            step="any"
+                            disabled={scenario?.status === "ARCHIVED"}
+                            required
+                          />
+                          <span className="absolute right-3 top-2.5 text-slate-500 text-xs font-semibold font-mono">%</span>
+                        </div>
+                      </div>
 
-                  {scenario?.status !== "ARCHIVED" && (
-                    <button
-                      type="submit"
-                      disabled={projSaving}
-                      className="w-full py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center justify-center gap-1.5"
-                    >
-                      {projSaving ? "Menyimpan & Menghitung..." : "Simpan & Hitung Ulang"}
-                    </button>
-                  )}
-                </form>
+                      <div>
+                        <label className="block text-slate-400 text-[10px] font-semibold uppercase tracking-wider mb-1.5">
+                          Max Demand Cap
+                        </label>
+                        <input
+                          type="number"
+                          value={projMaxDemand}
+                          onChange={(e) => setProjMaxDemand(e.target.value)}
+                          className="w-full bg-slate-900 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-3 py-2.5 text-xs text-slate-200 outline-none font-mono transition"
+                          placeholder="Uncapped"
+                          min={0}
+                          disabled={scenario?.status === "ARCHIVED"}
+                          step="any"
+                        />
+                      </div>
+                    </div>
+
+                    {scenario?.status !== "ARCHIVED" && (
+                      <button
+                        type="submit"
+                        disabled={projSaving}
+                        className="w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5"
+                        style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
+                      >
+                        {projSaving ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-slate-950/20 border-t-slate-950 rounded-full animate-spin" />
+                            Menyimpan & Menghitung...
+                          </>
+                        ) : (
+                          "Simpan & Hitung Ulang"
+                        )}
+                      </button>
+                    )}
+                  </form>
+                </div>
+
+                {/* SVG Chart */}
+                {projectionResult && !loadingProjection && (
+                  <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5 shadow-inner">
+                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
+                      Grafik Tren Proyeksi Tahunan ({selectedProjectionFlow.unit})
+                    </h4>
+                    
+                    {(() => {
+                      const projList = projectionResult.projections;
+                      const maxVal = Math.max(...projList.map(p => p.demand), 1);
+                      const capVal = projectionResult.maximum_demand && projectionResult.maximum_demand < 99999999999 ? projectionResult.maximum_demand : null;
+                      
+                      // Calculate chart bounds
+                      const viewBoxWidth = 500;
+                      const viewBoxHeight = 220;
+                      const paddingLeft = 60;
+                      const paddingRight = 20;
+                      const paddingTop = 20;
+                      const paddingBottom = 40;
+
+                      const plotWidth = viewBoxWidth - paddingLeft - paddingRight;
+                      const plotHeight = viewBoxHeight - paddingTop - paddingBottom;
+
+                      // Generate coordinates
+                      const points = projList.map((p, i) => {
+                        const x = paddingLeft + (i / (projList.length - 1)) * plotWidth;
+                        const y = paddingTop + (1 - (p.demand / maxVal)) * plotHeight;
+                        return `${x},${y}`;
+                      }).join(" ");
+
+                      const startX = paddingLeft;
+                      const endX = paddingLeft + plotWidth;
+                      const bottomY = paddingTop + plotHeight;
+                      const areaPoints = `${startX},${bottomY} ${points} ${endX},${bottomY}`;
+
+                      return (
+                        <div className="w-full">
+                          <svg viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`} className="w-full h-auto overflow-visible">
+                            <defs>
+                              <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor="#22d3ee" stopOpacity="0.2" />
+                                <stop offset="100%" stopColor="#22d3ee" stopOpacity="0.0" />
+                              </linearGradient>
+                            </defs>
+                            
+                            {/* Horizontal Gridlines & Labels */}
+                            {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
+                              const y = paddingTop + ratio * plotHeight;
+                              const valLabel = ((1 - ratio) * maxVal).toLocaleString("id-ID", { maximumFractionDigits: 0 });
+                              return (
+                                <g key={idx}>
+                                  <line x1={paddingLeft} y1={y} x2={viewBoxWidth - paddingRight} y2={y} stroke="#1e293b" strokeWidth="1" strokeDasharray="3 3" />
+                                  <text x={paddingLeft - 8} y={y + 3} fill="#64748b" className="text-[9px] font-mono" textAnchor="end">
+                                    {valLabel}
+                                  </text>
+                                </g>
+                              );
+                            })}
+
+                            {/* Max Capacity Cap Line */}
+                            {capVal !== null && capVal <= maxVal && (
+                              (() => {
+                                const capY = paddingTop + (1 - (capVal / maxVal)) * plotHeight;
+                                return (
+                                  <g>
+                                    <line x1={paddingLeft} y1={capY} x2={viewBoxWidth - paddingRight} y2={capY} stroke="#f97316" strokeWidth="1.5" strokeDasharray="5 4" />
+                                    <text x={viewBoxWidth - paddingRight - 4} y={capY - 6} fill="#f97316" className="text-[8px] font-semibold uppercase tracking-wider" textAnchor="end">
+                                      Cap: {capVal.toLocaleString("id-ID", { maximumFractionDigits: 0 })}
+                                    </text>
+                                  </g>
+                                );
+                              })()
+                            )}
+
+                            {/* Area under line */}
+                            {points && (
+                              <polygon points={areaPoints} fill="url(#chartGrad)" />
+                            )}
+
+                            {/* Stroke line */}
+                            {points && (
+                              <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2" />
+                            )}
+
+                            {/* Dots */}
+                            {projList.map((p, i) => {
+                              const x = paddingLeft + (i / (projList.length - 1)) * plotWidth;
+                              const y = paddingTop + (1 - (p.demand / maxVal)) * plotHeight;
+                              return (
+                                <g key={i} className="group">
+                                  <circle cx={x} cy={y} r="3" fill="#0f172a" stroke="#22d3ee" strokeWidth="1.5" className="hover:r-4 cursor-pointer transition-all duration-150" />
+                                  {/* Year labels at bottom */}
+                                  {((i === 0) || (i === projList.length - 1) || (i % 5 === 0)) && (
+                                    <text x={x} y={viewBoxHeight - 12} fill="#475569" className="text-[9px] font-mono font-semibold" textAnchor="middle">
+                                      Th {p.year}
+                                    </text>
+                                  )}
+                                </g>
+                              );
+                            })}
+                          </svg>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
               </div>
 
-              {/* Right Column: Visualization & Projection Table */}
-              <div className="lg:col-span-2 space-y-6">
+              {/* Right Column: Visualization & Projection Table (7/12 cols) */}
+              <div className="xl:col-span-7 space-y-4">
                 {loadingProjection ? (
-                  <div className="h-64 flex flex-col items-center justify-center space-y-3 bg-slate-950/20 border border-slate-900 rounded-2xl">
+                  <div className="h-[450px] flex flex-col items-center justify-center space-y-3 bg-slate-950/20 border border-slate-900 rounded-3xl">
                     <div className="w-8 h-8 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
                     <p className="text-slate-500 text-xs">Menghitung proyeksi kargo...</p>
                   </div>
                 ) : projectionResult ? (
-                  <>
-                    {/* SVG Chart */}
-                    <div className="bg-slate-950 border border-slate-800/80 rounded-2xl p-5">
-                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                        Grafik Proyeksi Tahunan ({selectedProjectionFlow.unit})
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        Tabel Proyeksi ({selectedProjectionFlow.unit}/Tahun)
                       </h4>
-                      
-                      {/* Custom SVG Line Chart */}
-                      {(() => {
-                        const projList = projectionResult.projections;
-                        const maxVal = Math.max(...projList.map(p => p.demand), 1);
-                        const width = 540;
-                        const height = 180;
-                        const paddingLeft = 55;
-                        const paddingRight = 20;
-                        const paddingTop = 15;
-                        const paddingBottom = 30;
-
-                        const plotWidth = width - paddingLeft - paddingRight;
-                        const plotHeight = height - paddingTop - paddingBottom;
-
-                        // Generate points string
-                        const points = projList.map((p, i) => {
-                          const x = paddingLeft + (i / (projList.length - 1)) * plotWidth;
-                          const y = paddingTop + (1 - (p.demand / maxVal)) * plotHeight;
-                          return `${x},${y}`;
-                        }).join(" ");
-
-                        // Generate area string (close path at bottom y)
-                        const startX = paddingLeft;
-                        const endX = paddingLeft + plotWidth;
-                        const bottomY = paddingTop + plotHeight;
-                        const areaPoints = `${startX},${bottomY} ${points} ${endX},${bottomY}`;
-
-                        return (
-                          <div className="overflow-x-auto">
-                            <svg width={width} height={height} className="overflow-visible mx-auto">
-                              <defs>
-                                <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                                  <stop offset="0%" stopColor="#06b6d4" stopOpacity="0.25" />
-                                  <stop offset="100%" stopColor="#06b6d4" stopOpacity="0.0" />
-                                </linearGradient>
-                              </defs>
-                              
-                              {/* Horizontal Gridlines & Labels */}
-                              {[0, 0.25, 0.5, 0.75, 1.0].map((ratio, idx) => {
-                                const y = paddingTop + ratio * plotHeight;
-                                const valLabel = ((1 - ratio) * maxVal).toLocaleString("id-ID", { maximumFractionDigits: 0 });
-                                return (
-                                  <g key={idx}>
-                                    <line x1={paddingLeft} y1={y} x2={width - paddingRight} y2={y} stroke="#1e293b" strokeDasharray="3 3" />
-                                    <text x={paddingLeft - 8} y={y + 4} fill="#64748b" className="text-[10px] font-mono text-right" textAnchor="end">
-                                      {valLabel}
-                                    </text>
-                                  </g>
-                                );
-                              })}
-
-                              {/* Area under line */}
-                              {points && (
-                                <polygon points={areaPoints} fill="url(#chartGrad)" />
-                              )}
-
-                              {/* Stroke line */}
-                              {points && (
-                                <polyline points={points} fill="none" stroke="#22d3ee" strokeWidth="2.5" />
-                              )}
-
-                              {/* Dots & Tooltips */}
-                              {projList.map((p, i) => {
-                                const x = paddingLeft + (i / (projList.length - 1)) * plotWidth;
-                                const y = paddingTop + (1 - (p.demand / maxVal)) * plotHeight;
-                                return (
-                                  <g key={i} className="group cursor-pointer">
-                                    <circle cx={x} cy={y} r="3.5" fill="#22d3ee" className="hover:r-5 transition duration-150" />
-                                    {/* Year labels at bottom */}
-                                    {((i === 0) || (i === projList.length - 1) || (i % 5 === 0)) && (
-                                      <text x={x} y={height - 8} fill="#64748b" className="text-[9px] font-mono" textAnchor="middle">
-                                        Yr {p.year}
-                                      </text>
-                                    )}
-                                  </g>
-                                );
-                              })}
-                            </svg>
-                          </div>
-                        );
-                      })()}
+                      <span className="text-[10px] text-slate-500">
+                        Horizon: <span className="font-semibold text-slate-300">{projectionResult.planning_horizon} Tahun</span>
+                      </span>
                     </div>
 
                     {/* Projection Table */}
-                    <div className="border border-slate-800 rounded-2xl overflow-hidden max-h-72 overflow-y-auto">
+                    <div className="border border-slate-800 bg-slate-950/30 rounded-2xl overflow-hidden max-h-[460px] overflow-y-auto shadow-inner">
                       <table className="w-full text-left border-collapse">
-                        <thead className="bg-slate-950 border-b border-slate-850 text-[10px] text-slate-400 font-semibold uppercase tracking-wider sticky top-0">
+                        <thead className="bg-slate-950 border-b border-slate-850 text-[10px] text-slate-400 font-semibold uppercase tracking-wider sticky top-0 z-20">
                           <tr>
-                            <th className="px-4 py-2.5">Tahun Proyek</th>
-                            <th className="px-4 py-2.5">Tahun Kalender</th>
-                            <th className="px-4 py-2.5 text-right">Volume Proyeksi</th>
-                            <th className="px-4 py-2.5">Trace Kalkulasi</th>
+                            <th className="px-5 py-3">Tahun</th>
+                            <th className="px-5 py-3">Tahun Kalender</th>
+                            <th className="px-5 py-3 text-right">Volume Demand</th>
+                            <th className="px-5 py-3 text-center">Rincian Perhitungan</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-850 text-xs">
-                          {projectionResult.projections.map((p) => (
-                            <tr key={p.year} className="hover:bg-slate-950/40 transition">
-                              <td className="px-4 py-2.5 font-semibold text-slate-200">Tahun {p.year}</td>
-                              <td className="px-4 py-2.5 font-mono text-slate-400">{p.calendar_year}</td>
-                              <td className="px-4 py-2.5 text-right font-mono font-semibold text-cyan-400">
-                                {p.demand.toLocaleString("id-ID", { maximumFractionDigits: 1 })}
-                              </td>
-                              <td className="px-4 py-2.5 text-slate-500 text-[10px] italic leading-relaxed max-w-sm">
-                                {p.trace}
-                              </td>
-                            </tr>
-                          ))}
+                        <tbody className="divide-y divide-slate-850/80 text-xs">
+                          {projectionResult.projections.map((p) => {
+                            const isExpanded = expandedTraces[p.year] || false;
+                            return (
+                              <React.Fragment key={p.year}>
+                                <tr className="hover:bg-slate-900/30 transition">
+                                  <td className="px-5 py-3 font-semibold text-slate-200">Tahun {p.year}</td>
+                                  <td className="px-5 py-3 font-mono text-slate-400">{p.calendar_year}</td>
+                                  <td className="px-5 py-3 text-right font-mono font-bold text-cyan-400">
+                                    {p.demand.toLocaleString("id-ID", { minimumFractionDigits: 1, maximumFractionDigits: 1 })}
+                                  </td>
+                                  <td className="px-5 py-3 text-center">
+                                    {isExpanded ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedTraces(prev => ({ ...prev, [p.year]: false }))}
+                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-800 text-slate-400 hover:text-slate-200 transition"
+                                      >
+                                        Sembunyikan
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => setExpandedTraces(prev => ({ ...prev, [p.year]: true }))}
+                                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-cyan-950/40 text-cyan-400 hover:bg-cyan-950/60 transition"
+                                      >
+                                        Show
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                                {isExpanded && (
+                                  <tr className="bg-slate-950/60">
+                                    <td colSpan={4} className="px-6 py-3 border-l-2 border-cyan-500">
+                                      <div className="text-[11px] text-slate-400 leading-relaxed font-mono whitespace-pre-wrap">
+                                        <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block mb-1">Audit Trace Kalkulasi:</span>
+                                        {p.trace}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
                         </tbody>
                       </table>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <div className="h-64 flex items-center justify-center bg-slate-950/20 border border-slate-900 rounded-2xl text-slate-500 text-xs">
+                  <div className="h-[450px] flex items-center justify-center bg-slate-950/20 border border-slate-900 rounded-3xl text-slate-500 text-xs">
                     Belum ada hasil proyeksi terhitung.
                   </div>
                 )}
@@ -1626,7 +1692,7 @@ export default function ScenarioWorkspace({
               <button
                 type="button"
                 onClick={() => setIsProjectionModalOpen(false)}
-                className="px-5 py-2 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+                className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
               >
                 Tutup
               </button>
@@ -1721,7 +1787,8 @@ export default function ScenarioWorkspace({
                               <>
                                 <button
                                   onClick={() => setIsEditing(true)}
-                                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                                  className="px-4 py-2 rounded-xl text-xs font-bold transition"
+                                  style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                                 >
                                   Edit Pengaturan
                                 </button>
@@ -1839,7 +1906,8 @@ export default function ScenarioWorkspace({
                             <button
                               type="submit"
                               disabled={updating}
-                              className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5 disabled:opacity-50"
+                              className="px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-50"
+                              style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                             >
                               {updating ? (
                                 <>
@@ -2015,7 +2083,8 @@ export default function ScenarioWorkspace({
                         {scenario?.status !== "ARCHIVED" && (
                           <button
                             onClick={handleOpenAddCommodity}
-                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                            style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                           >
                             + Tambah Komoditas
                           </button>
@@ -2111,7 +2180,8 @@ export default function ScenarioWorkspace({
                         {scenario?.status !== "ARCHIVED" && (
                           <button
                             onClick={handleOpenAddTenant}
-                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                            style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                           >
                             + Tambah Tenant
                           </button>
@@ -2213,7 +2283,8 @@ export default function ScenarioWorkspace({
                         {scenario?.status !== "ARCHIVED" && (
                           <button
                             onClick={handleOpenAddCargoFlow}
-                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold transition"
+                            style={{ backgroundColor: '#22d3ee', color: '#0f172a' }}
                           >
                             + Tambah Cargo Flow
                           </button>
