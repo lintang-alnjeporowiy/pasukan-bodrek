@@ -34,14 +34,14 @@
             cairo
             libdrm
             mesa
-            xorg.libX11
-            xorg.libXcomposite
-            xorg.libXdamage
-            xorg.libXext
-            xorg.libXfixes
-            xorg.libXrandr
-            xorg.libxcb
-            xorg.libXi
+            libx11
+            libxcomposite
+            libxdamage
+            libxext
+            libxfixes
+            libxrandr
+            libxcb
+            libxi
             alsa-lib
           ];
 
