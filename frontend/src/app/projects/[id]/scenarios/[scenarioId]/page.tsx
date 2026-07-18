@@ -37,6 +37,18 @@ interface Commodity {
   updated_at: string;
 }
 
+interface Tenant {
+  id: string;
+  project_id: string;
+  commodity_id?: string;
+  commodity_name?: string;
+  name: string;
+  description?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ScenarioWorkspace({
   params,
 }: {
@@ -83,6 +95,18 @@ export default function ScenarioWorkspace({
   const [commActive, setCommActive] = useState<boolean>(true);
   const [commError, setCommError] = useState<string | null>(null);
   const [commSaving, setCommSaving] = useState<boolean>(false);
+
+  // Tenants States
+  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [loadingTenants, setLoadingTenants] = useState<boolean>(false);
+  const [isTenantModalOpen, setIsTenantModalOpen] = useState<boolean>(false);
+  const [editingTenant, setEditingTenant] = useState<Tenant | null>(null);
+  const [tenantName, setTenantName] = useState<string>("");
+  const [tenantCommodityId, setTenantCommodityId] = useState<string>("");
+  const [tenantDesc, setTenantDesc] = useState<string>("");
+  const [tenantActive, setTenantActive] = useState<boolean>(true);
+  const [tenantError, setTenantError] = useState<string | null>(null);
+  const [tenantSaving, setTenantSaving] = useState<boolean>(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -151,13 +175,33 @@ export default function ScenarioWorkspace({
     }
   };
 
+  const fetchTenants = async () => {
+    setLoadingTenants(true);
+    try {
+      const res = await fetch(`http://localhost:8000/projects/${projectId}/tenants`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setTenants(data);
+      }
+    } catch (err) {
+      console.error("Gagal memuat tenants", err);
+    } finally {
+      setLoadingTenants(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [projectId, scenarioId]);
 
   useEffect(() => {
-    if (activeTab === "cargo" && cargoSubTab === "commodities") {
-      fetchCommodities();
+    if (activeTab === "cargo") {
+      if (cargoSubTab === "commodities") {
+        fetchCommodities();
+      } else if (cargoSubTab === "tenants") {
+        fetchTenants();
+        fetchCommodities(); // fetch master commodities for references
+      }
     }
   }, [activeTab, cargoSubTab]);
 
@@ -359,6 +403,95 @@ export default function ScenarioWorkspace({
       }
     } catch (err) {
       showToast("Gagal menghapus komoditas.");
+    }
+  };
+
+  // Tenant Actions
+  const handleOpenAddTenant = () => {
+    setEditingTenant(null);
+    setTenantName("");
+    setTenantCommodityId("");
+    setTenantDesc("");
+    setTenantActive(true);
+    setTenantError(null);
+    setIsTenantModalOpen(true);
+  };
+
+  const handleOpenEditTenant = (tenant: Tenant) => {
+    setEditingTenant(tenant);
+    setTenantName(tenant.name);
+    setTenantCommodityId(tenant.commodity_id || "");
+    setTenantDesc(tenant.description || "");
+    setTenantActive(tenant.is_active);
+    setTenantError(null);
+    setIsTenantModalOpen(true);
+  };
+
+  const handleSaveTenant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTenantError(null);
+
+    if (!tenantName.trim()) {
+      setTenantError("Nama tenant wajib diisi.");
+      return;
+    }
+
+    setTenantSaving(true);
+    try {
+      const payload = {
+        name: tenantName.trim(),
+        commodity_id: tenantCommodityId || null,
+        description: tenantDesc.trim() || null,
+        is_active: tenantActive,
+      };
+
+      let res;
+      if (editingTenant) {
+        res = await fetch(`http://localhost:8000/tenants/${editingTenant.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`http://localhost:8000/projects/${projectId}/tenants`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Gagal menyimpan tenant.");
+      }
+
+      showToast(editingTenant ? "Tenant berhasil diperbarui." : "Tenant baru berhasil ditambahkan.");
+      setIsTenantModalOpen(false);
+      fetchTenants();
+    } catch (err: any) {
+      setTenantError(err.message || "Terjadi kesalahan saat menyimpan tenant.");
+    } finally {
+      setTenantSaving(false);
+    }
+  };
+
+  const handleDeleteTenant = async (id: string, name: string) => {
+    const confirmDelete = window.confirm(`Apakah Anda yakin ingin menghapus tenant "${name}"?`);
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/tenants/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Tenant berhasil dihapus.");
+        fetchTenants();
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Gagal menghapus tenant.");
+      }
+    } catch (err) {
+      showToast("Gagal menghapus tenant.");
     }
   };
 
@@ -587,6 +720,111 @@ export default function ScenarioWorkspace({
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
                 >
                   {commSaving ? "Menyimpan..." : "Simpan Data"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tenant Modal Overlay */}
+      {isTenantModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div>
+              <h3 className="text-lg font-bold text-slate-100">
+                {editingTenant ? "Edit Tenant" : "Tambah Tenant Baru"}
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">
+                Definisikan penyewa industri baru untuk proyek aktif ini.
+              </p>
+            </div>
+
+            {tenantError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs">
+                {tenantError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveTenant} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Nama Tenant <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    placeholder="Contoh: PT Semen Indonesia"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Komoditas Utama
+                  </label>
+                  <select
+                    value={tenantCommodityId}
+                    onChange={(e) => setTenantCommodityId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                  >
+                    <option value="">-- Pilih Komoditas --</option>
+                    {commodities.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.code ? `(${c.code})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 md:col-span-2">
+                  <div className="space-y-0.5">
+                    <span className="block text-slate-300 text-xs font-medium">Status Aktif</span>
+                    <span className="text-[10px] text-slate-500">Menyatakan tenant aktif beroperasi</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={tenantActive}
+                    onChange={(e) => setTenantActive(e.target.checked)}
+                    className="w-4 h-4 rounded text-cyan-500 bg-slate-950 border-slate-800 focus:ring-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                  Deskripsi / Keterangan
+                </label>
+                <textarea
+                  value={tenantDesc}
+                  onChange={(e) => setTenantDesc(e.target.value)}
+                  rows={3}
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition resize-none"
+                  placeholder="Keterangan alur operasi tenant..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsTenantModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={tenantSaving}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                >
+                  {tenantSaving ? "Menyimpan..." : "Simpan Data"}
                 </button>
               </div>
             </form>
@@ -915,7 +1153,7 @@ export default function ScenarioWorkspace({
                 </div>
               )}
 
-              {/* Tab: Cargo (Commodity Master Data CRUD) */}
+              {/* Tab: Cargo (Commodity & Tenant CRUD) */}
               {activeTab === "cargo" && (
                 <div className="space-y-6 flex-1 flex flex-col">
                   {/* Cargo Sub-tabs Navigation */}
@@ -1058,8 +1296,110 @@ export default function ScenarioWorkspace({
                         </div>
                       )}
                     </div>
+                  ) : cargoSubTab === "tenants" ? (
+                    <div className="space-y-6 flex-1 flex flex-col">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm">
+                        <div className="space-y-1">
+                          <h3 className="text-lg font-bold text-slate-100">Daftar Tenant Pelanggan</h3>
+                          <p className="text-slate-400 text-xs max-w-xl">
+                            Kelola profil tenant penyewa lahan industri pelabuhan yang memiliki alur cargo masuk/keluar pada proyek ini.
+                          </p>
+                        </div>
+                        {scenario?.status !== "ARCHIVED" && (
+                          <button
+                            onClick={handleOpenAddTenant}
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                          >
+                            + Tambah Tenant
+                          </button>
+                        )}
+                      </div>
+
+                      {loadingTenants ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20">
+                          <div className="w-8 h-8 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+                          <p className="text-slate-500 text-xs mt-3">Memuat daftar tenant...</p>
+                        </div>
+                      ) : tenants.length === 0 ? (
+                        <div className="bg-slate-900/10 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-200 mb-2">Belum Ada Tenant</h3>
+                          <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
+                            Tambahkan tenant penyewa (seperti PT Semen Indonesia, PT Pupuk Kaltim, dll.) untuk memulai konfigurasi logistik pelabuhan.
+                          </p>
+                          {scenario?.status !== "ARCHIVED" && (
+                            <button
+                              onClick={handleOpenAddTenant}
+                              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition duration-200"
+                            >
+                              Tambah Tenant Pertama
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/50">
+                                <th className="px-6 py-4">Nama Tenant</th>
+                                <th className="px-6 py-4">Komoditas Utama</th>
+                                <th className="px-6 py-4">Deskripsi</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-900 text-sm">
+                              {tenants.map((ten) => (
+                                <tr key={ten.id} className="hover:bg-slate-900/20 transition">
+                                  <td className="px-6 py-4 font-semibold text-slate-200">{ten.name}</td>
+                                  <td className="px-6 py-4 text-slate-300">
+                                    {ten.commodity_name ? (
+                                      <span className="bg-slate-900 border border-slate-800 text-cyan-400 text-xs px-2 py-1 rounded">
+                                        {ten.commodity_name}
+                                      </span>
+                                    ) : (
+                                      <span className="text-slate-500">-</span>
+                                    )}
+                                  </td>
+                                  <td className="px-6 py-4 text-slate-400 max-w-xs truncate">{ten.description || "-"}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                      ten.is_active
+                                        ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
+                                        : "bg-rose-950/30 text-rose-400 border border-rose-900/50"
+                                    }`}>
+                                      {ten.is_active ? "Aktif" : "Nonaktif"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleOpenEditTenant(ten)}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition"
+                                    >
+                                      Edit
+                                    </button>
+                                    {scenario?.status !== "ARCHIVED" && (
+                                      <button
+                                        onClick={() => handleDeleteTenant(ten.id, ten.name)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-950/20 transition"
+                                      >
+                                        Hapus
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    /* Other Sub-Tabs: Tenants, Flows, Conversion Rules Placeholders */
+                    /* Other Sub-Tabs: Flows, Conversion Rules Placeholders */
                     <div className="bg-slate-900/20 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
                       <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
