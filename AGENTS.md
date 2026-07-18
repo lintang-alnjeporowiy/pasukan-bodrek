@@ -3,7 +3,7 @@
 Berikut adalah instruksi dasar mengenai apa yang boleh dan tidak boleh dilakukan oleh agent dalam project ini:
 
 1. **Dokumentasi & Konteks Project:**
-   - Seluruh dokumentasi teknis, model domain, spesifikasi kalkulasi, dan aturan bisnis berada di folder `/docs`. Selalu baca dokumen di folder tersebut sebelum memulai pekerjaan atau melakukan analisis.
+   - Dokumentasi teknis, model domain, spesifikasi kalkulasi, dan aturan bisnis berada di folder `/docs`. Jika terdapat konteks atau informasi project yang belum lengkap, silakan cari dan rujuk dokumen yang ada di dalam folder tersebut.
 
 2. **Penggunaan Browser & Screenshot (Hemat Token):**
    - **Harus Konfirmasi:** Agent wajib meminta konfirmasi/izin kepada pengguna sebelum membuka browser (`browser_subagent`).
