@@ -1,20 +1,36 @@
-playwright
-chromium
-nss
-nspr
-atk
-at-spi2-atk
-gtk3
-pango
-cairo
-libdrm
-mesa
-xorg.libX11
-xorg.libXcomposite
-xorg.libXdamage
-xorg.libXext
-xorg.libXfixes
-xorg.libXrandr
-xorg.libxcb
-xorg.libXi
-alsa-lib
+# Project Environment & System Host Details
+
+## 1. Project Environment Tools (inside nix develop)
+*   **Node.js:** v24.18.0
+*   **NPM:** 11.16.0
+*   **Python:** 3.12.13
+*   **PostgreSQL Client:** 18.4
+*   **HiGHS Solver:** 1.14.0
+*   **Git:** 2.54.0
+
+## 2. Host System Structure
+*   **OS:** NixOS 26.05 (Yarara)
+*   **Kernel:** Linux nixos 6.18.34 #1-NixOS SMP PREEMPT_DYNAMIC Mon Jun 1 15:51:08 UTC 2026 x86_64 GNU/Linux
+*   **Architecture:** x86_64-linux
+
+## 3. Why Playwright Cannot Run (Root Cause & Solution)
+*   **Root Cause:**
+    Playwright automatically downloads its own precompiled driver and browser binaries (like Chromium, Firefox, etc.) to the user cache directory: `/home/lintang/.cache/ms-playwright/`.
+    Because NixOS does not conform to the Filesystem Hierarchy Standard (FHS) and lacks a standard dynamic linker path (like `/lib64/ld-linux-x86-64.so.2`), standard dynamically linked binaries cannot be executed out-of-the-box, resulting in a dynamic linker loading failure:
+    ```text
+    Could not start dynamically linked executable: /home/lintang/.cache/ms-playwright/chromium-1228/chrome-linux64/chrome
+    NixOS cannot run dynamically linked executables intended for generic linux environments out of the box.
+    ```
+    This causes the subagent driver to fail with exit status 127.
+
+*   **Solutions/Workarounds:**
+    1.  **Use System-provided Chromium:**
+        Set the following environment variables when running Playwright:
+        ```bash
+        export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+        export PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=$(which chromium)
+        ```
+        The Nix environment already has Chromium installed and working at:
+        `/nix/store/pzngcmr4kgrw06vlj9cp7pjif3mrcwyh-chromium-150.0.7871.124/bin/chromium`
+    2.  **Enable nix-ld:**
+        Configure the NixOS system to use `nix-ld` to stub dynamic link libraries so that generic Linux binaries can execute normally.
