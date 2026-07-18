@@ -20,3 +20,4 @@ class ScenarioModel(Base):
     # Relationships
     project = relationship("ProjectModel", back_populates="scenarios")
     parent = relationship("ScenarioModel", remote_side=[id], backref="child_scenarios")
+    cargo_flows = relationship("CargoFlowModel", back_populates="scenario", cascade="all, delete-orphan")

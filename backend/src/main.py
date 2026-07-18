@@ -17,11 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-from src.api.routes import project_router, scenario_router, commodity_router, tenant_router
+from src.api.routes import project_router, scenario_router, commodity_router, tenant_router, cargo_flow_router
 app.include_router(project_router)
 app.include_router(scenario_router)
 app.include_router(commodity_router)
 app.include_router(tenant_router)
+app.include_router(cargo_flow_router)
 
 @app.get("/health")
 def health_check():

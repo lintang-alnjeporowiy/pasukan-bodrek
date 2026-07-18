@@ -63,7 +63,7 @@ Known Issues:
 - [x] Step 3.5 — Scenario Lifecycle
 - [x] Step 3.6 — Commodity Master Data
 - [x] Step 3.7 — Tenant
-- [ ] Step 3.8 — Inbound Cargo Flow
+- [x] Step 3.8 — Inbound Cargo Flow
 - [ ] Step 3.9 — Demand Projection
 - [ ] Step 3.10 — Demand Projection UI
 

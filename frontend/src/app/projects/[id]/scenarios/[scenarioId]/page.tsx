@@ -49,6 +49,23 @@ interface Tenant {
   updated_at: string;
 }
 
+interface CargoFlow {
+  id: string;
+  scenario_id: string;
+  tenant_id: string;
+  tenant_name?: string;
+  commodity_id: string;
+  commodity_name?: string;
+  direction: string;
+  origin: string;
+  destination_port: string;
+  base_annual_demand: number;
+  unit: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function ScenarioWorkspace({
   params,
 }: {
@@ -107,6 +124,21 @@ export default function ScenarioWorkspace({
   const [tenantActive, setTenantActive] = useState<boolean>(true);
   const [tenantError, setTenantError] = useState<string | null>(null);
   const [tenantSaving, setTenantSaving] = useState<boolean>(false);
+
+  // Cargo Flows States
+  const [cargoFlows, setCargoFlows] = useState<CargoFlow[]>([]);
+  const [loadingCargoFlows, setLoadingCargoFlows] = useState<boolean>(false);
+  const [isCargoFlowModalOpen, setIsCargoFlowModalOpen] = useState<boolean>(false);
+  const [editingCargoFlow, setEditingCargoFlow] = useState<CargoFlow | null>(null);
+  const [flowTenantId, setFlowTenantId] = useState<string>("");
+  const [flowCommodityId, setFlowCommodityId] = useState<string>("");
+  const [flowOrigin, setFlowOrigin] = useState<string>("");
+  const [flowDestination, setFlowDestination] = useState<string>("");
+  const [flowDemand, setFlowDemand] = useState<string>("0");
+  const [flowUnit, setFlowUnit] = useState<string>("Ton");
+  const [flowActive, setFlowActive] = useState<boolean>(true);
+  const [flowError, setFlowError] = useState<string | null>(null);
+  const [flowSaving, setFlowSaving] = useState<boolean>(false);
 
   const showToast = (message: string) => {
     setToastMessage(message);
@@ -190,6 +222,21 @@ export default function ScenarioWorkspace({
     }
   };
 
+  const fetchCargoFlows = async () => {
+    setLoadingCargoFlows(true);
+    try {
+      const res = await fetch(`http://localhost:8000/scenarios/${scenarioId}/cargo-flows`, { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        setCargoFlows(data);
+      }
+    } catch (err) {
+      console.error("Gagal memuat cargo flows", err);
+    } finally {
+      setLoadingCargoFlows(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, [projectId, scenarioId]);
@@ -200,7 +247,11 @@ export default function ScenarioWorkspace({
         fetchCommodities();
       } else if (cargoSubTab === "tenants") {
         fetchTenants();
-        fetchCommodities(); // fetch master commodities for references
+        fetchCommodities();
+      } else if (cargoSubTab === "flows") {
+        fetchCargoFlows();
+        fetchTenants();
+        fetchCommodities();
       }
     }
   }, [activeTab, cargoSubTab]);
@@ -258,7 +309,6 @@ export default function ScenarioWorkspace({
 
     setUpdating(true);
     try {
-      // 1. Update Scenario details
       const scenarioPromise = fetch(`http://localhost:8000/scenarios/${scenarioId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -268,7 +318,6 @@ export default function ScenarioWorkspace({
         }),
       });
 
-      // 2. Update Project details (Base Year, Planning Horizon)
       const projectPromise = fetch(`http://localhost:8000/projects/${projectId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -492,6 +541,122 @@ export default function ScenarioWorkspace({
       }
     } catch (err) {
       showToast("Gagal menghapus tenant.");
+    }
+  };
+
+  // Cargo Flow Actions
+  const handleOpenAddCargoFlow = () => {
+    setEditingCargoFlow(null);
+    setFlowTenantId("");
+    setFlowCommodityId("");
+    setFlowOrigin("");
+    setFlowDestination("");
+    setFlowDemand("0");
+    setFlowUnit("Ton");
+    setFlowActive(true);
+    setFlowError(null);
+    setIsCargoFlowModalOpen(true);
+  };
+
+  const handleOpenEditCargoFlow = (flow: CargoFlow) => {
+    setEditingCargoFlow(flow);
+    setFlowTenantId(flow.tenant_id);
+    setFlowCommodityId(flow.commodity_id);
+    setFlowOrigin(flow.origin);
+    setFlowDestination(flow.destination_port);
+    setFlowDemand(flow.base_annual_demand.toString());
+    setFlowUnit(flow.unit);
+    setFlowActive(flow.is_active);
+    setFlowError(null);
+    setIsCargoFlowModalOpen(true);
+  };
+
+  const handleSaveCargoFlow = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFlowError(null);
+
+    if (!flowTenantId) {
+      setFlowError("Pilih Tenant terlebih dahulu.");
+      return;
+    }
+    if (!flowCommodityId) {
+      setFlowError("Pilih Komoditas terlebih dahulu.");
+      return;
+    }
+    if (!flowOrigin.trim()) {
+      setFlowError("Origin wajib diisi.");
+      return;
+    }
+    if (!flowDestination.trim()) {
+      setFlowError("Destination Port wajib diisi.");
+      return;
+    }
+    const demandVal = parseFloat(flowDemand);
+    if (isNaN(demandVal) || demandVal < 0) {
+      setFlowError("Base Annual Demand harus berupa angka positif.");
+      return;
+    }
+
+    setFlowSaving(true);
+    try {
+      const payload = {
+        tenant_id: flowTenantId,
+        commodity_id: flowCommodityId,
+        direction: "INBOUND",
+        origin: flowOrigin.trim(),
+        destination_port: flowDestination.trim(),
+        base_annual_demand: demandVal,
+        unit: flowUnit,
+        is_active: flowActive,
+      };
+
+      let res;
+      if (editingCargoFlow) {
+        res = await fetch(`http://localhost:8000/cargo-flows/${editingCargoFlow.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`http://localhost:8000/scenarios/${scenarioId}/cargo-flows`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Gagal menyimpan cargo flow.");
+      }
+
+      showToast(editingCargoFlow ? "Cargo flow berhasil diperbarui." : "Cargo flow baru berhasil ditambahkan.");
+      setIsCargoFlowModalOpen(false);
+      fetchCargoFlows();
+    } catch (err: any) {
+      setFlowError(err.message || "Terjadi kesalahan saat menyimpan cargo flow.");
+    } finally {
+      setFlowSaving(false);
+    }
+  };
+
+  const handleDeleteCargoFlow = async (id: string) => {
+    const confirmDelete = window.confirm("Apakah Anda yakin ingin menghapus alur kargo masuk (inbound cargo flow) ini?");
+    if (!confirmDelete) return;
+
+    try {
+      const res = await fetch(`http://localhost:8000/cargo-flows/${id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Cargo flow berhasil dihapus.");
+        fetchCargoFlows();
+      } else {
+        const errData = await res.json();
+        showToast(errData.detail || "Gagal menghapus cargo flow.");
+      }
+    } catch (err) {
+      showToast("Gagal menghapus cargo flow.");
     }
   };
 
@@ -832,6 +997,167 @@ export default function ScenarioWorkspace({
         </div>
       )}
 
+      {/* Cargo Flow Modal Overlay */}
+      {isCargoFlowModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
+            
+            <div>
+              <h3 className="text-lg font-bold text-slate-100">
+                {editingCargoFlow ? "Edit Cargo Flow" : "Tambah Cargo Flow Baru"}
+              </h3>
+              <p className="text-slate-500 text-xs mt-1">
+                Tentukan rute asal-tujuan logistik inbound untuk tenant penyewa.
+              </p>
+            </div>
+
+            {flowError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 p-4 rounded-xl text-xs">
+                {flowError}
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCargoFlow} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Pilih Tenant <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={flowTenantId}
+                    onChange={(e) => setFlowTenantId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    required
+                  >
+                    <option value="">-- Pilih Tenant --</option>
+                    {tenants.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Pilih Komoditas <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={flowCommodityId}
+                    onChange={(e) => setFlowCommodityId(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    required
+                  >
+                    <option value="">-- Pilih Komoditas --</option>
+                    {commodities.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.code ? `(${c.code})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Asal Cargo (Origin) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={flowOrigin}
+                    onChange={(e) => setFlowOrigin(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    placeholder="Contoh: Australia, Kalimantan"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Pelabuhan Tujuan (Destination Port) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={flowDestination}
+                    onChange={(e) => setFlowDestination(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    placeholder="Contoh: KEK Terminal, Dermaga A"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Base Annual Demand <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={flowDemand}
+                    onChange={(e) => setFlowDemand(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none font-mono transition"
+                    min={0}
+                    step="any"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 text-xs font-semibold mb-2 uppercase tracking-wider">
+                    Satuan (Unit) <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={flowUnit}
+                    onChange={(e) => setFlowUnit(e.target.value)}
+                    className="w-full bg-slate-950 border border-slate-800 focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none transition"
+                    required
+                  >
+                    <option value="Ton">Ton</option>
+                    <option value="TEU">TEU</option>
+                    <option value="KL">KL</option>
+                    <option value="M3">M3 (Cubic Meter)</option>
+                    <option value="Box">Box</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl px-4 py-3">
+                <div className="space-y-0.5">
+                  <span className="block text-slate-300 text-xs font-medium">Status Aktif</span>
+                  <span className="text-[10px] text-slate-500">Mempengaruhi kalkulasi demand tahunan</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={flowActive}
+                  onChange={(e) => setFlowActive(e.target.checked)}
+                  className="w-4 h-4 rounded text-cyan-500 bg-slate-950 border-slate-800 focus:ring-cyan-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCargoFlowModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-950 border border-slate-800 text-slate-300 hover:text-slate-100 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={flowSaving}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition flex items-center gap-1.5"
+                >
+                  {flowSaving ? "Menyimpan..." : "Simpan Data"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Main Workspace Layout with Sidebar Navigation */}
       <div className="flex-1 max-w-7xl mx-auto w-full px-6 py-8 grid grid-cols-1 lg:grid-cols-4 gap-8 z-10">
         {/* Sidebar Nav */}
@@ -1153,7 +1479,7 @@ export default function ScenarioWorkspace({
                 </div>
               )}
 
-              {/* Tab: Cargo (Commodity & Tenant CRUD) */}
+              {/* Tab: Cargo */}
               {activeTab === "cargo" && (
                 <div className="space-y-6 flex-1 flex flex-col">
                   {/* Cargo Sub-tabs Navigation */}
@@ -1398,8 +1724,114 @@ export default function ScenarioWorkspace({
                         </div>
                       )}
                     </div>
+                  ) : cargoSubTab === "flows" ? (
+                    <div className="space-y-6 flex-1 flex flex-col">
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm">
+                        <div className="space-y-1">
+                          <h3 className="text-lg font-bold text-slate-100">Alur Kargo Masuk (Inbound Cargo Flows)</h3>
+                          <p className="text-slate-400 text-xs max-w-xl">
+                            Kelola alur kargo inbound yang didatangkan oleh penyewa lahan industri menuju dermaga pelabuhan pada skenario aktif ini.
+                          </p>
+                        </div>
+                        {scenario?.status !== "ARCHIVED" && (
+                          <button
+                            onClick={handleOpenAddCargoFlow}
+                            className="px-4 py-2.5 rounded-xl text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition"
+                          >
+                            + Tambah Cargo Flow
+                          </button>
+                        )}
+                      </div>
+
+                      {loadingCargoFlows ? (
+                        <div className="flex-1 flex flex-col items-center justify-center py-20">
+                          <div className="w-8 h-8 border-4 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+                          <p className="text-slate-500 text-xs mt-3">Memuat daftar cargo flows...</p>
+                        </div>
+                      ) : cargoFlows.length === 0 ? (
+                        <div className="bg-slate-900/10 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
+                          <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5h1.5m-1.5 3h1.5m-7.5 3h7.5m-7.5 3h7.5m3-9h3.375c.621 0 1.125.504 1.125 1.125V18a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18V6.125c0-.621.504-1.125 1.125-1.125H9.75M8.25 21h8.25" />
+                            </svg>
+                          </div>
+                          <h3 className="text-xl font-bold text-slate-200 mb-2">Belum Ada Cargo Flow</h3>
+                          <p className="text-sm text-slate-500 max-w-md leading-relaxed mb-6">
+                            Tambahkan alur logistik masuk baru untuk menghubungkan penyewa industri dengan komoditas, lokasi asal, dan pelabuhan tujuan.
+                          </p>
+                          {scenario?.status !== "ARCHIVED" && (
+                            <button
+                              onClick={handleOpenAddCargoFlow}
+                              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-300 transition duration-200"
+                            >
+                              Tambah Cargo Flow Pertama
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="border border-slate-900 bg-slate-900/10 rounded-2xl overflow-hidden backdrop-blur-sm">
+                          <table className="w-full text-left border-collapse">
+                            <thead>
+                              <tr className="border-b border-slate-900 text-slate-400 text-xs font-semibold uppercase tracking-wider bg-slate-900/50">
+                                <th className="px-6 py-4">Tenant</th>
+                                <th className="px-6 py-4">Komoditas</th>
+                                <th className="px-6 py-4">Origin</th>
+                                <th className="px-6 py-4">Destination Port</th>
+                                <th className="px-6 py-4 text-right">Base Annual Demand</th>
+                                <th className="px-6 py-4">Satuan</th>
+                                <th className="px-6 py-4">Status</th>
+                                <th className="px-6 py-4 text-right">Aksi</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-900 text-sm">
+                              {cargoFlows.map((flow) => (
+                                <tr key={flow.id} className="hover:bg-slate-900/20 transition">
+                                  <td className="px-6 py-4 font-semibold text-slate-200">{flow.tenant_name || "-"}</td>
+                                  <td className="px-6 py-4 text-slate-300">
+                                    <span className="bg-slate-900 border border-slate-800 text-cyan-400 text-xs px-2 py-1 rounded">
+                                      {flow.commodity_name || "-"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-slate-300">{flow.origin}</td>
+                                  <td className="px-6 py-4 text-slate-300">{flow.destination_port}</td>
+                                  <td className="px-6 py-4 text-right font-mono font-medium text-slate-200">
+                                    {flow.base_annual_demand.toLocaleString("id-ID")}
+                                  </td>
+                                  <td className="px-6 py-4 text-slate-400 text-xs">{flow.unit}</td>
+                                  <td className="px-6 py-4">
+                                    <span className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
+                                      flow.is_active
+                                        ? "bg-emerald-950/30 text-emerald-400 border border-emerald-900/50"
+                                        : "bg-rose-950/30 text-rose-400 border border-rose-900/50"
+                                    }`}>
+                                      {flow.is_active ? "Aktif" : "Nonaktif"}
+                                    </span>
+                                  </td>
+                                  <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                                    <button
+                                      onClick={() => handleOpenEditCargoFlow(flow)}
+                                      className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-slate-300 hover:text-cyan-400 transition"
+                                    >
+                                      Edit
+                                    </button>
+                                    {scenario?.status !== "ARCHIVED" && (
+                                      <button
+                                        onClick={() => handleDeleteCargoFlow(flow.id)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-800 text-rose-400 hover:bg-rose-950/20 transition"
+                                      >
+                                        Hapus
+                                      </button>
+                                    )}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    /* Other Sub-Tabs: Flows, Conversion Rules Placeholders */
+                    /* Other Sub-Tabs: Conversion Rules Placeholders */
                     <div className="bg-slate-900/20 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
                       <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
