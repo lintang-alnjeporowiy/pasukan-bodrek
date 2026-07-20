@@ -31,9 +31,9 @@ class CargoFlowService:
             return None
         return self._map_to_domain(db_flow)
 
-    def list_cargo_flows(self, scenario_id: UUID) -> List[CargoFlowDomain]:
-        """Business logic for listing all cargo flows for a scenario."""
-        db_flows = self.repository.list_by_scenario(scenario_id)
+    def list_cargo_flows(self, scenario_id: UUID, direction: Optional[str] = None) -> List[CargoFlowDomain]:
+        """Business logic for listing cargo flows for a scenario."""
+        db_flows = self.repository.list_by_scenario(scenario_id, direction=direction)
         return [self._map_to_domain(f) for f in db_flows]
 
     def update_cargo_flow(self, cargo_flow_id: UUID, flow_in: CargoFlowUpdate) -> Optional[CargoFlowDomain]:

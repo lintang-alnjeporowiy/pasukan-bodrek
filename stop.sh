@@ -66,4 +66,18 @@ if [ -n "$NEXT_REMAINING" ]; then
   kill -9 $NEXT_REMAINING 2>/dev/null || true
 fi
 
+# 4. Clean up Playwright drivers and headless browsers
+echo "Cleaning up Playwright drivers and headless browsers..."
+PLAYWRIGHT_DRIVERS=$(pgrep -f "ms-playwright.*run-driver" || true)
+if [ -n "$PLAYWRIGHT_DRIVERS" ]; then
+  echo "Stopping Playwright driver processes..."
+  kill -9 $PLAYWRIGHT_DRIVERS 2>/dev/null || true
+fi
+
+HEADLESS_BROWSERS=$(ps aux | grep -E "chromium|chrome|chrome-headless-shell" | grep -E "headless" | grep -v grep | awk '{print $2}' || true)
+if [ -n "$HEADLESS_BROWSERS" ]; then
+  echo "Stopping headless browser processes..."
+  kill -9 $HEADLESS_BROWSERS 2>/dev/null || true
+fi
+
 echo -e "${GREEN}All cleanup operations complete.${NC}"

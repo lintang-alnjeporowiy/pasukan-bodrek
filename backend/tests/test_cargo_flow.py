@@ -64,7 +64,7 @@ def test_cargo_flow_lifecycle(db_session):
     assert tenant_res.status_code == 201
     tenant_id = tenant_res.json()["id"]
 
-    # 5. Create a cargo flow under the scenario
+    # 5. Create an inbound cargo flow under the scenario
     flow_payload = {
         "tenant_id": tenant_id,
         "commodity_id": commodity_id,
@@ -78,6 +78,7 @@ def test_cargo_flow_lifecycle(db_session):
     flow_res = client.post(f"/scenarios/{scenario_id}/cargo-flows", json=flow_payload)
     assert flow_res.status_code == 201
     flow_data = flow_res.json()
+    assert flow_data["direction"] == "INBOUND"
     assert flow_data["origin"] == "Australia"
     assert flow_data["destination_port"] == "KEK Port"
     assert flow_data["base_annual_demand"] == 500000.0
@@ -85,17 +86,52 @@ def test_cargo_flow_lifecycle(db_session):
     assert flow_data["commodity_name"] == "Wheat"
     flow_id = flow_data["id"]
 
+    # 5b. Create an outbound cargo flow under the scenario
+    outbound_payload = {
+        "tenant_id": tenant_id,
+        "commodity_id": commodity_id,
+        "direction": "OUTBOUND",
+        "origin": "KEK Port",
+        "destination_port": "Surabaya Domestic Terminal",
+        "base_annual_demand": 250000.0,
+        "unit": "Ton",
+        "is_active": True
+    }
+    outbound_res = client.post(f"/scenarios/{scenario_id}/cargo-flows", json=outbound_payload)
+    assert outbound_res.status_code == 201
+    outbound_data = outbound_res.json()
+    assert outbound_data["direction"] == "OUTBOUND"
+    assert outbound_data["origin"] == "KEK Port"
+    assert outbound_data["destination_port"] == "Surabaya Domestic Terminal"
+    assert outbound_data["base_annual_demand"] == 250000.0
+    outbound_id = outbound_data["id"]
+
     # 6. Get the cargo flow by ID
     get_res = client.get(f"/cargo-flows/{flow_id}")
     assert get_res.status_code == 200
     assert get_res.json()["origin"] == "Australia"
 
-    # 7. List cargo flows for this scenario
+    # 7. List cargo flows for this scenario (all)
     list_res = client.get(f"/scenarios/{scenario_id}/cargo-flows")
     assert list_res.status_code == 200
     list_data = list_res.json()
-    assert len(list_data) >= 1
+    assert len(list_data) >= 2
     assert flow_id in [f["id"] for f in list_data]
+    assert outbound_id in [f["id"] for f in list_data]
+
+    # 7b. Filter cargo flows by direction=INBOUND
+    inbound_list_res = client.get(f"/scenarios/{scenario_id}/cargo-flows?direction=INBOUND")
+    assert inbound_list_res.status_code == 200
+    inbound_ids = [f["id"] for f in inbound_list_res.json()]
+    assert flow_id in inbound_ids
+    assert outbound_id not in inbound_ids
+
+    # 7c. Filter cargo flows by direction=OUTBOUND
+    outbound_list_res = client.get(f"/scenarios/{scenario_id}/cargo-flows?direction=OUTBOUND")
+    assert outbound_list_res.status_code == 200
+    outbound_ids = [f["id"] for f in outbound_list_res.json()]
+    assert outbound_id in outbound_ids
+    assert flow_id not in outbound_ids
 
     # 8. List cargo flows for another random scenario (Verify scoping)
     other_scenario_id = str(uuid.uuid4())
@@ -116,13 +152,16 @@ def test_cargo_flow_lifecycle(db_session):
     assert patch_data["base_annual_demand"] == 600000.0
     assert patch_data["is_active"] is False
 
-    # 10. Delete the cargo flow
-    delete_res = client.delete(f"/cargo-flows/{flow_id}")
-    assert delete_res.status_code == 204
+    # 10. Delete both cargo flows
+    delete_res_1 = client.delete(f"/cargo-flows/{flow_id}")
+    assert delete_res_1.status_code == 204
+    delete_res_2 = client.delete(f"/cargo-flows/{outbound_id}")
+    assert delete_res_2.status_code == 204
 
     # 11. Verify deletion from list
     list_res_2 = client.get(f"/scenarios/{scenario_id}/cargo-flows")
     assert flow_id not in [f["id"] for f in list_res_2.json()]
+    assert outbound_id not in [f["id"] for f in list_res_2.json()]
 
     # Cleanup leftover DB records
     db_flow = db_session.query(CargoFlowModel).filter(CargoFlowModel.id == flow_id).first()

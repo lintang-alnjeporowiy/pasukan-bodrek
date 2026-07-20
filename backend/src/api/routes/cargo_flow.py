@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
-from typing import List
+from typing import List, Optional
 
 from src.infrastructure.database import get_db
 from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowDomain, CargoFlowUpdate, ProjectionResult
@@ -16,10 +16,10 @@ def create_cargo_flow(scenario_id: UUID, flow_in: CargoFlowCreate, db: Session =
     return service.create_cargo_flow(scenario_id, flow_in)
 
 @router.get("/scenarios/{scenario_id}/cargo-flows", response_model=List[CargoFlowDomain])
-def list_cargo_flows(scenario_id: UUID, db: Session = Depends(get_db)):
-    """List all cargo flows under a scenario."""
+def list_cargo_flows(scenario_id: UUID, direction: Optional[str] = None, db: Session = Depends(get_db)):
+    """List all cargo flows under a scenario, optionally filtered by direction."""
     service = CargoFlowService(db)
-    return service.list_cargo_flows(scenario_id)
+    return service.list_cargo_flows(scenario_id, direction=direction)
 
 @router.get("/cargo-flows/{cargo_flow_id}", response_model=CargoFlowDomain)
 def get_cargo_flow(cargo_flow_id: UUID, db: Session = Depends(get_db)):

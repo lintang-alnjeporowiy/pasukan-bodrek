@@ -14,12 +14,12 @@ class CargoFlowRepository:
         """Retrieve a cargo flow by its unique ID."""
         return self.db.query(CargoFlowModel).filter(CargoFlowModel.id == cargo_flow_id).first()
 
-    def list_by_scenario(self, scenario_id: UUID) -> List[CargoFlowModel]:
-        """List all cargo flows belonging to a specific scenario."""
-        return self.db.query(CargoFlowModel)\
-            .filter(CargoFlowModel.scenario_id == scenario_id)\
-            .order_by(CargoFlowModel.created_at.asc())\
-            .all()
+    def list_by_scenario(self, scenario_id: UUID, direction: Optional[str] = None) -> List[CargoFlowModel]:
+        """List cargo flows belonging to a specific scenario, optionally filtered by direction."""
+        query = self.db.query(CargoFlowModel).filter(CargoFlowModel.scenario_id == scenario_id)
+        if direction:
+            query = query.filter(CargoFlowModel.direction == direction)
+        return query.order_by(CargoFlowModel.created_at.asc()).all()
 
     def create(self, scenario_id: UUID, flow_in: CargoFlowCreate) -> CargoFlowModel:
         """Create a new cargo flow under a scenario."""

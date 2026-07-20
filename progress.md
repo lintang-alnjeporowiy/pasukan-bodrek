@@ -9,13 +9,13 @@
 
 ```text
 Current Phase:
-Phase 0 — Repository Bootstrap
+Phase 4 — Outbound Cargo and Conversion
 
 Current Step:
-Step 0.1 — Inspect Repository
+Step 4.1 — Outbound Cargo Flow
 
 Last Updated:
--
+2026-07-20
 
 Known Issues:
 -
@@ -75,7 +75,7 @@ Known Issues:
 
 # Phase 4 — Outbound Cargo and Conversion
 
-- [ ] Step 4.1 — Outbound Cargo Flow
+- [x] Step 4.1 — Outbound Cargo Flow
 - [ ] Step 4.2 — Cargo Conversion Rule
 - [ ] Step 4.3 — Scenario Parameter Override
 - [ ] Step 4.4 — Conversion UI
@@ -89,23 +89,25 @@ Known Issues:
 # Phase 5 — Ports and Routes
 
 - [ ] Step 5.1 — Port Master Data
-- [ ] Step 5.2 — Route
-- [ ] Step 5.3 — Assign Route to Cargo Flow
+- [ ] Step 5.2 — Bathymetry Profiles
+- [ ] Step 5.3 — Bathymetry Visualization
+- [ ] Step 5.4 — Route
+- [ ] Step 5.5 — Assign Route to Cargo Flow
 
 ---
 
 # Phase 6 — Fleet Master Data and Candidates
 
 - [ ] Step 6.1 — Ship Master Data
-- [ ] Step 6.2 — Ship Compatibility
-- [ ] Step 6.3 — Port Compatibility
+- [ ] Step 6.2 — Commodity–Vessel Compatibility
+- [ ] Step 6.3 — Port–Vessel Compatibility
 - [ ] Step 6.4 — Candidate Set
 - [ ] Step 6.5 — Manual Ship Selection
 
 ---
 
 # Phase 7 — First Complete Transport Calculation
-
+- [ ] Step 7.0 — Calculation Context
 - [ ] Step 7.1 — Daily Demand
 - [ ] Step 7.2 — Service Interval
 - [ ] Step 7.3 — Annual Frequency
@@ -135,6 +137,8 @@ Known Issues:
 
 - [ ] Step 9.1 — Charter Rate
 - [ ] Step 9.2 — Charter Cost
+- [ ] Step 9.2.5 — Fuel Consumption
+- [ ] Step 9.2.6 — Fuel Cost
 - [ ] Step 9.3 — Voyage Cost
 - [ ] Step 9.4 — Port Cost
 - [ ] Step 9.5 — Annual Shipping Cost
@@ -149,6 +153,7 @@ Known Issues:
 # Phase 10 — Cargo Handling Equipment
 
 - [ ] Step 10.1 — Equipment Master Data
+- [ ] Step 10.1.5 — Equipment Compatibility
 - [ ] Step 10.2 — Equipment Candidates
 - [ ] Step 10.3 — Manual Equipment Selection
 - [ ] Step 10.4 — Equipment Quantity Rule
@@ -160,6 +165,7 @@ Known Issues:
 # Phase 11 — Berth and Terminal Capacity
 
 - [ ] Step 11.1 — Ship Days at Berth
+- [ ] Step 11.1.5 — Cargo Flow Aggregation
 - [ ] Step 11.2 — Terminal Aggregation
 - [ ] Step 11.3 — BOR
 - [ ] Step 11.4 — Required Berths
@@ -181,25 +187,40 @@ Known Issues:
 
 # Phase 13 — Waterside Infrastructure
 
-- [ ] Step 13.1 — Governing Vessel Dimensions
-- [ ] Step 13.2 — Navigation Channel
-- [ ] Step 13.3 — Turning Basin
-- [ ] Step 13.4 — Anchorage
-- [ ] Step 13.5 — Infrastructure UI
+- [ ] Step 13.1 — Governing Vessel
+
+- [ ] Step 13.2 — Required Water Depth
+
+- [ ] Step 13.3 — Bathymetry
+
+- [ ] Step 13.4 Required Distance
+
+- [ ] Step 13.5 Navigation Channel
+
+- [ ] Step 13.6 Turning Basin
+
+- [ ] Step 13.7 Anchorage
+
+- [ ] Step 13.8 Waterside Infrastructure UI
 
 ---
 
 # Phase 14 — Port Development Alternatives
 
-- [ ] Step 14.1 — Development Decision Model
-- [ ] Step 14.2 — Trestle Calculation
-- [ ] Step 14.3 — Dredging Calculation
-- [ ] Step 14.4 — Development Comparison UI
+- [ ] Step 14.1 Development Decision
 
+- [ ] Step 14.2 Trestle
+
+- [ ] Step 14.3 Dredging
+
+- [ ] Step 14.4 Comparison
+
+- [ ] Step 14.5 Development Trace
 ---
 
 # Phase 15 — Full Reference Calculation
 
+- [ ] Step 15.0 Golden Dataset
 - [ ] Step 15.1 — Reference Scenario Seed
 - [ ] Step 15.2 — Run Complete Calculation
 - [ ] Step 15.3 — Verify Intermediate Results
@@ -249,6 +270,7 @@ Known Issues:
 # Phase 19 — Optimization Foundation
 
 - [ ] Step 19.1 — Optimization Data Adapter
+- [ ] Step 19.1.5 Candidate Generation
 - [ ] Step 19.2 — Ship Selection Only
 - [ ] Step 19.3 — Equipment Selection
 - [ ] Step 19.4 — Development Mode
@@ -263,7 +285,7 @@ Known Issues:
 ---
 
 # Phase 20 — Complete Project Workspace
-
+- [ ] Overview Workspace
 - [ ] Complete Overview
 - [ ] Complete Cargo Workspace
 - [ ] Complete Ports Workspace
