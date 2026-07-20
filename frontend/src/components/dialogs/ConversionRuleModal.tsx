@@ -46,8 +46,19 @@ export const ConversionRuleModal: React.FC<ConversionRuleModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const defaultUnits = ["Ton", "TEU", "m3", "Kg", "Box", "Container"];
+  const commodityUnits = commodities.map((c) => c.unit).filter(Boolean);
+  const availableUnits = Array.from(new Set([...defaultUnits, ...commodityUnits]));
+
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+      {/* Datalist for autocomplete */}
+      <datalist id="rule-modal-unit-list">
+        {availableUnits.map((u) => (
+          <option key={u} value={u} />
+        ))}
+      </datalist>
+
       <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
         <div className="flex justify-between items-center pb-3 border-b border-slate-800">
           <h3 className="text-lg font-bold text-slate-100">
@@ -84,9 +95,10 @@ export const ConversionRuleModal: React.FC<ConversionRuleModalProps> = ({
               <input
                 type="text"
                 required
+                list="rule-modal-unit-list"
                 value={sourceUnit}
                 onChange={(e) => setSourceUnit(e.target.value)}
-                placeholder="misal: Ton"
+                placeholder="Pilih/ketik misal: Ton"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
               />
             </div>
@@ -96,9 +108,10 @@ export const ConversionRuleModal: React.FC<ConversionRuleModalProps> = ({
               <input
                 type="text"
                 required
+                list="rule-modal-unit-list"
                 value={targetUnit}
                 onChange={(e) => setTargetUnit(e.target.value)}
-                placeholder="misal: TEU"
+                placeholder="Pilih/ketik misal: TEU"
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
               />
             </div>

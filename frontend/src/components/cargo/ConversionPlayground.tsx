@@ -32,8 +32,20 @@ export const ConversionPlayground: React.FC<ConversionPlaygroundProps> = ({
   setTestTargetUnit,
   onRunTest,
 }) => {
+  // Collect unique available units for dropdown suggestions
+  const defaultUnits = ["Ton", "TEU", "m3", "Kg", "Box", "Container"];
+  const commodityUnits = commodities.map((c) => c.unit).filter(Boolean);
+  const availableUnits = Array.from(new Set([...defaultUnits, ...commodityUnits]));
+
   return (
     <div className="bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm space-y-6">
+      {/* Shared Datalist for Unit Autocomplete / Dropdown */}
+      <datalist id="playground-unit-list">
+        {availableUnits.map((u) => (
+          <option key={u} value={u} />
+        ))}
+      </datalist>
+
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -77,24 +89,26 @@ export const ConversionPlayground: React.FC<ConversionPlaygroundProps> = ({
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Asal</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Asal (Source Unit)</label>
           <input
             type="text"
+            list="playground-unit-list"
             value={testSourceUnit}
             onChange={(e) => setTestSourceUnit(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-            placeholder="misal: Ton"
+            placeholder="Pilih atau ketik satuan (misal: Ton)"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Tujuan</label>
+          <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Tujuan (Target Unit)</label>
           <input
             type="text"
+            list="playground-unit-list"
             value={testTargetUnit}
             onChange={(e) => setTestTargetUnit(e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
-            placeholder="misal: TEU"
+            placeholder="Pilih atau ketik satuan (misal: TEU)"
           />
         </div>
       </div>
@@ -143,8 +157,8 @@ export const ConversionPlayground: React.FC<ConversionPlaygroundProps> = ({
               Calculation Trace (Langkah Perhitungan Backend)
             </h5>
             <div className="space-y-2">
-              {testResult.steps.map((step) => (
-                <div key={step.step_number} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-1">
+              {testResult.steps.map((step, idx) => (
+                <div key={`step-${idx}-${step.step_number}`} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-1">
                   <div className="flex items-center justify-between font-semibold text-slate-300">
                     <span>Langkah {step.step_number}: {step.description}</span>
                     {step.value !== null && step.value !== undefined && (
