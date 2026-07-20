@@ -79,6 +79,8 @@ Known Issues:
 - [x] Step 4.2 — Cargo Conversion Rule
 - [x] Step 4.3 — Scenario Parameter Override
 - [x] Step 4.4 — Conversion UI
+- [x] Step 4.5 — Architecture Refactoring
+
 
 ## Milestone C
 
