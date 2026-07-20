@@ -45,8 +45,37 @@ interface Tenant {
   name: string;
   description?: string;
   is_active: boolean;
+}
+
+interface CargoConversionRule {
+  id: string;
+  commodity_id?: string | null;
+  commodity_name?: string | null;
+  source_unit: string;
+  target_unit: string;
+  conversion_factor: number;
+  description?: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface ConversionTraceStep {
+  step_number: number;
+  description: string;
+  formula?: string | null;
+  value?: number | null;
+}
+
+interface ConversionTestResult {
+  source_value: number;
+  source_unit: string;
+  target_value: number;
+  target_unit: string;
+  conversion_factor: number;
+  applied_rule_id?: string | null;
+  status: string;
+  steps: ConversionTraceStep[];
 }
 
 interface CargoFlow {
@@ -177,6 +206,170 @@ export default function ScenarioWorkspace({
   const [projSaving, setProjSaving] = useState<boolean>(false);
   const [expandedTraces, setExpandedTraces] = useState<Record<number, boolean>>({});
 
+  // Conversion Rules & Interactive Test States
+  const [conversionRules, setConversionRules] = useState<CargoConversionRule[]>([]);
+  const [loadingConversionRules, setLoadingConversionRules] = useState<boolean>(false);
+  const [isRuleModalOpen, setIsRuleModalOpen] = useState<boolean>(false);
+  const [editingRule, setEditingRule] = useState<CargoConversionRule | null>(null);
+  const [ruleCommodityId, setRuleCommodityId] = useState<string>("");
+  const [ruleSourceUnit, setRuleSourceUnit] = useState<string>("Ton");
+  const [ruleTargetUnit, setRuleTargetUnit] = useState<string>("TEU");
+  const [ruleConversionFactor, setRuleConversionFactor] = useState<string>("0.55");
+  const [ruleDescription, setRuleDescription] = useState<string>("");
+  const [ruleIsActive, setRuleIsActive] = useState<boolean>(true);
+  const [ruleError, setRuleError] = useState<string | null>(null);
+  const [ruleSaving, setRuleSaving] = useState<boolean>(false);
+
+  // Live Conversion Testing Panel States
+  const [testCommodityId, setTestCommodityId] = useState<string>("");
+  const [testSourceValue, setTestSourceValue] = useState<string>("500000");
+  const [testSourceUnit, setTestSourceUnit] = useState<string>("Ton");
+  const [testTargetUnit, setTestTargetUnit] = useState<string>("TEU");
+  const [testingConversion, setTestingConversion] = useState<boolean>(false);
+  const [testResult, setTestResult] = useState<ConversionTestResult | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
+
+  const fetchConversionRules = async () => {
+    setLoadingConversionRules(true);
+    try {
+      const res = await fetch("http://localhost:8000/conversion-rules");
+      if (res.ok) {
+        const data = await res.json();
+        setConversionRules(data);
+      }
+    } catch (err) {
+      console.error("Error fetching conversion rules:", err);
+    } finally {
+      setLoadingConversionRules(false);
+    }
+  };
+
+  const handleOpenRuleModal = (rule?: CargoConversionRule) => {
+    if (rule) {
+      setEditingRule(rule);
+      setRuleCommodityId(rule.commodity_id || "");
+      setRuleSourceUnit(rule.source_unit);
+      setRuleTargetUnit(rule.target_unit);
+      setRuleConversionFactor(rule.conversion_factor.toString());
+      setRuleDescription(rule.description || "");
+      setRuleIsActive(rule.is_active);
+    } else {
+      setEditingRule(null);
+      setRuleCommodityId("");
+      setRuleSourceUnit("Ton");
+      setRuleTargetUnit("TEU");
+      setRuleConversionFactor("0.55");
+      setRuleDescription("");
+      setRuleIsActive(true);
+    }
+    setRuleError(null);
+    setIsRuleModalOpen(true);
+  };
+
+  const handleSaveRule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRuleError(null);
+    setRuleSaving(true);
+    try {
+      const factorNum = parseFloat(ruleConversionFactor);
+      if (isNaN(factorNum) || factorNum <= 0) {
+        setRuleError("Faktor konversi harus berupa angka positif.");
+        setRuleSaving(false);
+        return;
+      }
+
+      const payload = {
+        commodity_id: ruleCommodityId ? ruleCommodityId : null,
+        source_unit: ruleSourceUnit,
+        target_unit: ruleTargetUnit,
+        conversion_factor: factorNum,
+        description: ruleDescription || null,
+        is_active: ruleIsActive,
+      };
+
+      const url = editingRule
+        ? `http://localhost:8000/conversion-rules/${editingRule.id}`
+        : "http://localhost:8000/conversion-rules";
+      const method = editingRule ? "PATCH" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Gagal menyimpan Conversion Rule.");
+      }
+
+      showToast(editingRule ? "Conversion Rule berhasil diperbarui." : "Conversion Rule baru berhasil ditambahkan.");
+      setIsRuleModalOpen(false);
+      fetchConversionRules();
+    } catch (err: any) {
+      setRuleError(err.message || "Terjadi kesalahan saat menyimpan Conversion Rule.");
+    } finally {
+      setRuleSaving(false);
+    }
+  };
+
+  const handleDeleteRule = async (ruleId: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus Conversion Rule ini?")) return;
+    try {
+      const res = await fetch(`http://localhost:8000/conversion-rules/${ruleId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        showToast("Conversion Rule berhasil dihapus.");
+        fetchConversionRules();
+      } else {
+        showToast("Gagal menghapus Conversion Rule.");
+      }
+    } catch (err) {
+      console.error("Error deleting conversion rule:", err);
+      showToast("Terjadi kesalahan saat menghapus Conversion Rule.");
+    }
+  };
+
+  const handleRunConversionTest = async () => {
+    setTestError(null);
+    setTestResult(null);
+    setTestingConversion(true);
+    try {
+      const valNum = parseFloat(testSourceValue);
+      if (isNaN(valNum)) {
+        setTestError("Nilai demand asal harus berupa angka valid.");
+        setTestingConversion(false);
+        return;
+      }
+
+      const payload = {
+        source_value: valNum,
+        source_unit: testSourceUnit,
+        target_unit: testTargetUnit,
+        commodity_id: testCommodityId ? testCommodityId : null,
+      };
+
+      const res = await fetch("http://localhost:8000/cargo-conversions/convert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || "Gagal menjalankan tes konversi.");
+      }
+
+      const data = await res.json();
+      setTestResult(data);
+    } catch (err: any) {
+      setTestError(err.message || "Terjadi kesalahan saat pengujian konversi.");
+    } finally {
+      setTestingConversion(false);
+    }
+  };
+
   const showToast = (message: string) => {
     setToastMessage(message);
     setTimeout(() => {
@@ -293,6 +486,9 @@ export default function ScenarioWorkspace({
       } else if (cargoSubTab === "outbound") {
         fetchCargoFlows("OUTBOUND");
         fetchTenants();
+        fetchCommodities();
+      } else if (cargoSubTab === "conversion") {
+        fetchConversionRules();
         fetchCommodities();
       }
     }
@@ -2525,8 +2721,243 @@ export default function ScenarioWorkspace({
                         </div>
                       )}
                     </div>
+                  ) : cargoSubTab === "conversion" ? (
+                    <div className="space-y-8 flex-1 flex flex-col">
+                      {/* Top Bar: Title & Stats & Add Rule Button */}
+                      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm">
+                        <div>
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="text-lg font-bold text-slate-100">Master Cargo Conversion Rules</h3>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                              {conversionRules.length} Rule Terdaftar
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400">
+                            Aturan konversi satuan kargo (misal Ton &rarr; TEU atau Ton &rarr; Processed Food) untuk proyek perencanaan pelabuhan.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => handleOpenRuleModal()}
+                          className="px-4 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm transition duration-200 flex items-center gap-2 shadow-lg shadow-cyan-500/20 shrink-0"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                          </svg>
+                          <span>Tambah Conversion Rule</span>
+                        </button>
+                      </div>
+
+                      {/* Conversion Rules Table */}
+                      <div className="bg-slate-900/30 border border-slate-900 rounded-3xl overflow-hidden backdrop-blur-sm">
+                        {loadingConversionRules ? (
+                          <div className="p-12 text-center text-slate-500">Memuat daftar Conversion Rule...</div>
+                        ) : conversionRules.length === 0 ? (
+                          <div className="p-12 text-center text-slate-500">
+                            Belum ada Conversion Rule yang terdaftar. Klik <strong>Tambah Conversion Rule</strong> untuk membuat rule baru.
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-sm text-slate-300">
+                              <thead className="bg-slate-900/80 text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
+                                <tr>
+                                  <th className="px-6 py-4">Komoditas / Scope</th>
+                                  <th className="px-6 py-4">Satuan Asal</th>
+                                  <th className="px-6 py-4">Satuan Tujuan</th>
+                                  <th className="px-6 py-4">Faktor Konversi</th>
+                                  <th className="px-6 py-4">Keterangan</th>
+                                  <th className="px-6 py-4">Status</th>
+                                  <th className="px-6 py-4 text-right">Aksi</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-900">
+                                {conversionRules.map((rule) => (
+                                  <tr key={rule.id} className="hover:bg-slate-800/30 transition">
+                                    <td className="px-6 py-4 font-medium text-slate-200">
+                                      {rule.commodity_name ? (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs">
+                                          {rule.commodity_name}
+                                        </span>
+                                      ) : (
+                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-800 text-slate-400 border border-slate-700 text-xs">
+                                          Global Rule (Semua Komoditas)
+                                        </span>
+                                      )}
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-300 font-mono">{rule.source_unit}</td>
+                                    <td className="px-6 py-4 text-slate-300 font-mono">{rule.target_unit}</td>
+                                    <td className="px-6 py-4 font-mono font-bold text-cyan-400">
+                                      &times; {rule.conversion_factor}
+                                    </td>
+                                    <td className="px-6 py-4 text-slate-400 text-xs max-w-xs truncate">
+                                      {rule.description || "-"}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                      <span
+                                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                                          rule.is_active
+                                            ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                            : "bg-slate-800 text-slate-500"
+                                        }`}
+                                      >
+                                        {rule.is_active ? "Aktif" : "Non-aktif"}
+                                      </span>
+                                    </td>
+                                    <td className="px-6 py-4 text-right space-x-2">
+                                      <button
+                                        onClick={() => handleOpenRuleModal(rule)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteRule(rule.id)}
+                                        className="px-3 py-1.5 rounded-lg text-xs font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition"
+                                      >
+                                        Hapus
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Interactive Conversion Testing Panel */}
+                      <div className="bg-slate-900/30 border border-slate-900 rounded-3xl p-6 backdrop-blur-sm space-y-6">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75V18m-3-9h.008v.008H12.75V9m-4.75 6.75h.008v.008H8V15.75zM12 15.75h.008v.008H12V15.75z" />
+                            </svg>
+                          </div>
+                          <div>
+                            <h4 className="text-base font-bold text-slate-100">Pengujian Konversi Real-Time (Calculation Engine Playground)</h4>
+                            <p className="text-xs text-slate-400">
+                              Simulasikan perhitungan konversi permintaan kargo menggunakan Calculation Service backend dan periksa transparansi Calculation Trace.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-slate-950/60 p-5 rounded-2xl border border-slate-800/80">
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1.5">Komoditas (Skenario Opsional)</label>
+                            <select
+                              value={testCommodityId}
+                              onChange={(e) => setTestCommodityId(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                            >
+                              <option value="">Global Rule (Semua Komoditas)</option>
+                              {commodities.map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.name} ({c.code})
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1.5">Nilai Demand Asal</label>
+                            <input
+                              type="number"
+                              value={testSourceValue}
+                              onChange={(e) => setTestSourceValue(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                              placeholder="misal: 500000"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Asal</label>
+                            <input
+                              type="text"
+                              value={testSourceUnit}
+                              onChange={(e) => setTestSourceUnit(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                              placeholder="misal: Ton"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-slate-400 mb-1.5">Satuan Tujuan</label>
+                            <input
+                              type="text"
+                              value={testTargetUnit}
+                              onChange={(e) => setTestTargetUnit(e.target.value)}
+                              className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                              placeholder="misal: TEU"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex justify-end">
+                          <button
+                            onClick={handleRunConversionTest}
+                            disabled={testingConversion}
+                            className="px-5 py-2.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:bg-cyan-500/50 text-slate-950 font-semibold text-sm transition duration-200 flex items-center gap-2 shadow-lg shadow-cyan-500/10"
+                          >
+                            {testingConversion && <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />}
+                            <span>Jalankan Uji Konversi</span>
+                          </button>
+                        </div>
+
+                        {testError && (
+                          <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm">
+                            {testError}
+                          </div>
+                        )}
+
+                        {testResult && (
+                          <div className="p-6 rounded-2xl bg-slate-950/80 border border-cyan-500/30 space-y-4 shadow-xl">
+                            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-800">
+                              <div>
+                                <span className="text-xs text-slate-500 uppercase tracking-wider block mb-1">Hasil Konversi Demand</span>
+                                <div className="text-2xl font-black text-cyan-400 font-mono">
+                                  {testResult.target_value.toLocaleString("id-ID")} {testResult.target_unit}
+                                </div>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Dari {testResult.source_value.toLocaleString("id-ID")} {testResult.source_unit}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-xs text-slate-500 block">Faktor Konversi Digunakan</span>
+                                <span className="text-lg font-bold text-slate-200 font-mono">&times; {testResult.conversion_factor}</span>
+                              </div>
+                            </div>
+
+                            {/* Calculation Trace */}
+                            <div>
+                              <h5 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-cyan-400">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Calculation Trace (Langkah Perhitungan Backend)
+                              </h5>
+                              <div className="space-y-2">
+                                {testResult.steps.map((step) => (
+                                  <div key={step.step_number} className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-1">
+                                    <div className="flex items-center justify-between font-semibold text-slate-300">
+                                      <span>Langkah {step.step_number}: {step.description}</span>
+                                      {step.value !== null && step.value !== undefined && (
+                                        <span className="font-mono text-cyan-400">{step.value.toLocaleString("id-ID")}</span>
+                                      )}
+                                    </div>
+                                    {step.formula && (
+                                      <div className="font-mono text-slate-400 bg-slate-950 px-2.5 py-1 rounded-md text-[11px]">
+                                        {step.formula}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   ) : (
-                    /* Other Sub-Tabs: Conversion Rules Placeholders */
+                    /* Other Sub-Tabs: Placeholders */
                     <div className="bg-slate-900/20 border border-slate-900/60 rounded-3xl p-12 flex-1 flex flex-col items-center justify-center text-center">
                       <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mb-6 text-slate-500 shadow-inner">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8">
@@ -2576,6 +3007,146 @@ export default function ScenarioWorkspace({
           )}
         </main>
       </div>
+
+      {/* Conversion Rule Modal */}
+      {isRuleModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl">
+            <div className="flex justify-between items-center pb-3 border-b border-slate-800">
+              <h3 className="text-lg font-bold text-slate-100">
+                {editingRule ? "Edit Cargo Conversion Rule" : "Tambah Cargo Conversion Rule"}
+              </h3>
+              <button
+                onClick={() => setIsRuleModalOpen(false)}
+                className="text-slate-500 hover:text-slate-300 text-sm font-semibold transition"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveRule} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Komoditas / Scope Rule
+                </label>
+                <select
+                  value={ruleCommodityId}
+                  onChange={(e) => setRuleCommodityId(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="">Global Rule (Berlaku Semua Komoditas)</option>
+                  {commodities.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.code})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Rule spesifik komoditas akan diprioritaskan melebihi Rule Global.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Satuan Asal (Source Unit) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={ruleSourceUnit}
+                    onChange={(e) => setRuleSourceUnit(e.target.value)}
+                    placeholder="misal: Ton"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-slate-400 mb-1">
+                    Satuan Tujuan (Target Unit) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={ruleTargetUnit}
+                    onChange={(e) => setRuleTargetUnit(e.target.value)}
+                    placeholder="misal: TEU"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Faktor Konversi (Conversion Factor) *
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  value={ruleConversionFactor}
+                  onChange={(e) => setRuleConversionFactor(e.target.value)}
+                  placeholder="misal: 0.55"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 font-mono focus:outline-none focus:border-cyan-500"
+                />
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Rumus konversi: Nilai Target = Nilai Asal &times; Faktor Konversi.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1">
+                  Keterangan / Deskripsi
+                </label>
+                <textarea
+                  rows={2}
+                  value={ruleDescription}
+                  onChange={(e) => setRuleDescription(e.target.value)}
+                  placeholder="misal: 1 ton gandum menghasilkan 0.55 TEU kontainer standar"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-slate-200 focus:outline-none focus:border-cyan-500 resize-none"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="ruleActiveCheck"
+                  checked={ruleIsActive}
+                  onChange={(e) => setRuleIsActive(e.target.checked)}
+                  className="w-4 h-4 accent-cyan-500 rounded border-slate-800 bg-slate-950"
+                />
+                <label htmlFor="ruleActiveCheck" className="text-xs text-slate-300 font-medium">
+                  Rule Aktif (Dapat Digunakan Mesin Konversi)
+                </label>
+              </div>
+
+              {ruleError && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
+                  {ruleError}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsRuleModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={ruleSaving}
+                  className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-semibold text-sm transition flex items-center gap-2"
+                >
+                  {ruleSaving && <div className="w-4 h-4 border-2 border-slate-950 border-t-transparent rounded-full animate-spin" />}
+                  <span>{editingRule ? "Simpan Perubahan" : "Buat Rule"}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-900 bg-slate-950/40 text-center py-6 px-6 z-10">

@@ -19,3 +19,11 @@ Ringkasan ringkas mengenai kondisi dan konteks proyek untuk memandu agen/model.
     *   Headless shell browser disymlink ke system Chromium:
         `ln -sf $(which chromium) ~/.cache/ms-playwright/chromium_headless_shell-1228/chrome-headless-shell-linux64/chrome-headless-shell`
 *   **Status Pengujian:** Browser subagent berjalan lancar dan sukses menangkap screenshot/visual halaman.
+
+---
+
+## 3. Status Terkini (Pasca Phase 4 — Outbound Cargo & Conversion)
+*   **Phase 4.1 Outbound Cargo Flow:** CRUD Outbound Cargo Flow terpisah dari Inbound dengan skema tenant, komoditas, pelabuhan asal/tujuan, demand awal, dan unit.
+*   **Phase 4.2 Cargo Conversion Rule & Engine:** Master Conversion Rule (`commodity_id` [opsional/global], `source_unit`, `target_unit`, `conversion_factor`, `is_active`) dan service konversi dengan transparansi Calculation Trace.
+*   **Phase 4.3 Scenario Parameter Override:** Framework parameter hirarkis (`Scenario Override` > `Project Default` > `System Default`) menggunakan `SYSTEM_PARAMETERS_REGISTRY` dan endpoint resolusi parameter.
+*   **Phase 4.4 Conversion UI:** UI manajemen Conversion Rules (CRUD) & Live Calculation Engine Testing Panel di ruang kerja skenario (`cargoSubTab === "conversion"`) dengan rincian Calculation Trace real-time.

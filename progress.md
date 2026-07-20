@@ -78,11 +78,11 @@ Known Issues:
 - [x] Step 4.1 — Outbound Cargo Flow
 - [x] Step 4.2 — Cargo Conversion Rule
 - [x] Step 4.3 — Scenario Parameter Override
-- [ ] Step 4.4 — Conversion UI
+- [x] Step 4.4 — Conversion UI
 
 ## Milestone C
 
-- [ ] Inbound-outbound cargo conversion works with scenario-specific parameters
+- [x] Inbound-outbound cargo conversion works with scenario-specific parameters
 
 ---
 
