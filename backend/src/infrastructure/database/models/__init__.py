@@ -4,6 +4,7 @@ from src.infrastructure.database.models.commodity import CommodityModel
 from src.infrastructure.database.models.tenant import TenantModel
 from src.infrastructure.database.models.cargo_flow import CargoFlowModel
 from src.infrastructure.database.models.cargo_conversion_rule import CargoConversionRuleModel
+from src.infrastructure.database.models.scenario_parameter import ProjectParameterModel, ScenarioParameterOverrideModel
 
 __all__ = [
     "ProjectModel",
@@ -12,4 +13,6 @@ __all__ = [
     "TenantModel",
     "CargoFlowModel",
     "CargoConversionRuleModel",
+    "ProjectParameterModel",
+    "ScenarioParameterOverrideModel",
 ]

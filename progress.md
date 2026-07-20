@@ -12,7 +12,7 @@ Current Phase:
 Phase 4 — Outbound Cargo and Conversion
 
 Current Step:
-Step 4.2 — Cargo Conversion Rule
+Step 4.3 — Scenario Parameter Override
 
 Last Updated:
 2026-07-20
@@ -77,7 +77,7 @@ Known Issues:
 
 - [x] Step 4.1 — Outbound Cargo Flow
 - [x] Step 4.2 — Cargo Conversion Rule
-- [ ] Step 4.3 — Scenario Parameter Override
+- [x] Step 4.3 — Scenario Parameter Override
 - [ ] Step 4.4 — Conversion UI
 
 ## Milestone C
