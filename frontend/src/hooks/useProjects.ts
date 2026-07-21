@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Project } from "@/types/project";
+import { Project, CreateProjectPayload } from "@/types/project";
+import { StudyPort } from "@/types/studyPort";
 import { projectService } from "@/services/project.service";
+import { studyPortService } from "@/services/studyPort.service";
 
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -15,6 +17,18 @@ export function useProjects() {
   const [newProjectDesc, setNewProjectDesc] = useState<string>("");
   const [newBaseYear, setNewBaseYear] = useState<number>(2026);
   const [newPlanningHorizon, setNewPlanningHorizon] = useState<number>(20);
+
+  // Study Port Modal States
+  const [portMode, setPortMode] = useState<"new" | "copy">("new");
+  const [portName, setPortName] = useState<string>("");
+  const [portCode, setPortCode] = useState<string>("");
+  const [portLocation, setPortLocation] = useState<string>("");
+  const [portLat, setPortLat] = useState<string>("-6.101");
+  const [portLong, setPortLong] = useState<string>("106.882");
+  const [portDesc, setPortDesc] = useState<string>("");
+  const [copySourceProjectId, setCopySourceProjectId] = useState<string>("");
+  const [samplePorts, setSamplePorts] = useState<StudyPort[]>([]);
+
   const [creating, setCreating] = useState<boolean>(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -42,6 +56,18 @@ export function useProjects() {
     fetchProjects();
   }, [fetchProjects]);
 
+  // Fetch sample ports when modal opens
+  useEffect(() => {
+    if (isModalOpen) {
+      studyPortService.getSampleStudyPorts().then((ports) => {
+        setSamplePorts(ports);
+        if (ports.length > 0 && !copySourceProjectId) {
+          setCopySourceProjectId(ports[0].project_id);
+        }
+      }).catch(() => {});
+    }
+  }, [isModalOpen]);
+
   const handleCreateProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -49,20 +75,42 @@ export function useProjects() {
     try {
       setCreating(true);
       setCreateError(null);
-      await projectService.create({
+
+      const payload: CreateProjectPayload = {
         name: newProjectName.trim(),
         description: newProjectDesc.trim() || undefined,
         base_year: newBaseYear,
         planning_horizon: newPlanningHorizon,
-      });
+      };
+
+      if (portMode === "new") {
+        payload.study_port = {
+          name: portName.trim() || `Pelabuhan ${newProjectName.trim()}`,
+          code: portCode.trim() || undefined,
+          location: portLocation.trim() || "Kawasan Pelabuhan Utama",
+          latitude: parseFloat(portLat) || 0,
+          longitude: parseFloat(portLong) || 0,
+          description: portDesc.trim() || undefined,
+        };
+      } else if (portMode === "copy" && copySourceProjectId) {
+        payload.copy_study_port_from_project_id = copySourceProjectId;
+      }
+
+      await projectService.create(payload);
 
       setNewProjectName("");
       setNewProjectDesc("");
       setNewBaseYear(2026);
       setNewPlanningHorizon(20);
+      setPortName("");
+      setPortCode("");
+      setPortLocation("");
+      setPortLat("-6.101");
+      setPortLong("106.882");
+      setPortDesc("");
       setIsModalOpen(false);
 
-      triggerToast("Proyek perencanaan berhasil dibuat!");
+      triggerToast("Proyek perencanaan dan Study Port berhasil dibuat!");
       await fetchProjects();
     } catch (err: any) {
       setCreateError(err.message || "Gagal membuat proyek baru.");
@@ -82,6 +130,15 @@ export function useProjects() {
     newProjectDesc,
     newBaseYear,
     newPlanningHorizon,
+    portMode,
+    portName,
+    portCode,
+    portLocation,
+    portLat,
+    portLong,
+    portDesc,
+    copySourceProjectId,
+    samplePorts,
     creating,
     createError,
     setIsModalOpen,
@@ -89,6 +146,14 @@ export function useProjects() {
     setNewProjectDesc,
     setNewBaseYear,
     setNewPlanningHorizon,
+    setPortMode,
+    setPortName,
+    setPortCode,
+    setPortLocation,
+    setPortLat,
+    setPortLong,
+    setPortDesc,
+    setCopySourceProjectId,
     handleCreateProject,
     fetchProjects,
   };

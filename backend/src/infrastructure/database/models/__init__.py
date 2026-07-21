@@ -5,6 +5,10 @@ from src.infrastructure.database.models.tenant import TenantModel
 from src.infrastructure.database.models.cargo_flow import CargoFlowModel
 from src.infrastructure.database.models.cargo_conversion_rule import CargoConversionRuleModel
 from src.infrastructure.database.models.scenario_parameter import ProjectParameterModel, ScenarioParameterOverrideModel
+from src.infrastructure.database.models.study_port import StudyPortModel
+from src.infrastructure.database.models.external_port import ExternalPortModel
+from src.infrastructure.database.models.bathymetry import BathymetryProfileModel, BathymetryPointModel
+from src.infrastructure.database.models.route import RouteModel
 
 __all__ = [
     "ProjectModel",
@@ -15,4 +19,9 @@ __all__ = [
     "CargoConversionRuleModel",
     "ProjectParameterModel",
     "ScenarioParameterOverrideModel",
+    "StudyPortModel",
+    "ExternalPortModel",
+    "BathymetryProfileModel",
+    "BathymetryPointModel",
+    "RouteModel",
 ]

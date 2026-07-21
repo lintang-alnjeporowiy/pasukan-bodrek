@@ -282,6 +282,69 @@ Sistem tidak boleh memproyeksikan derived outbound secara independen apabila sec
 
 ---
 
+## Study Port
+
+Setiap project merepresentasikan satu studi perencanaan untuk satu pelabuhan utama (Study Port).
+
+Study Port adalah lokasi yang menjadi objek perencanaan transportasi laut dan pengembangan infrastruktur.
+
+Semua perhitungan berikut dilakukan terhadap Study Port:
+
+- Terminal
+- Berth
+- Cargo Handling Equipment
+- Waterside Infrastructure
+- Landside Infrastructure
+- Bathymetry
+- Navigation Channel
+- Turning Basin
+- Anchorage
+- Port Development
+
+Satu Project harus memiliki tepat satu Study Port.
+
+Relationship:
+
+Project
+└── Study Port (1)
+
+Study Port
+├── Bathymetry Profiles
+├── Terminal Groups
+├── Infrastructure
+├── Development Alternatives
+└── Scenarios
+
+## External Port
+
+External Port merupakan pelabuhan asal atau tujuan cargo flow.
+
+External Port tidak menjadi objek pengembangan.
+
+Data yang dimiliki antara lain:
+
+- Port Name
+- Country / Location
+- Maximum Draft
+- Maximum LOA
+- Productivity
+- Additional Port Time
+- Tariff
+
+External Port hanya digunakan sebagai referensi operasi pelayaran.
+
+Relationship:
+
+Project
+├── Study Port
+└── External Ports (0..*)
+
+Cargo Flow
+├── Origin Port
+└── Destination Port
+
+Minimal salah satu dari Origin atau Destination harus merupakan Study Port milik project.
+
 # 4. Port dan Route Domain
 
 ## 4.1 Port
@@ -323,17 +386,31 @@ Route
 
 Satu `CargoFlow` memiliki satu rute utama.
 
-Route menghubungkan:
+## Route
 
-```text
-CargoFlow
-    ↓
-Origin Port
-    ↓
-Sailing Route
-    ↓
-Destination Port
-```
+Route selalu menghubungkan:
+
+Study Port
+↓
+
+External Port
+
+atau
+
+External Port
+↓
+
+Study Port
+
+Route tidak digunakan untuk menghubungkan dua External Port.
+
+Direction menentukan orientasi:
+
+Inbound:
+External Port → Study Port
+
+Outbound:
+Study Port → External Port
 
 Distance adalah karakteristik route, bukan karakteristik kapal.
 

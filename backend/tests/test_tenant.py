@@ -96,13 +96,14 @@ def test_tenant_lifecycle(db_session):
     assert tenant_id not in [t["id"] for t in list_res_2.json()]
 
     # Cleanup leftover DB records
-    db_tenant = db_session.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    db_tenant = db_session.query(TenantModel).filter(TenantModel.id == uuid.UUID(tenant_id)).first()
     if db_tenant:
         db_session.delete(db_tenant)
-    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == uuid.UUID(project_id)).first()
     if db_project:
         db_session.delete(db_project)
-    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == commodity_id).first()
+    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == uuid.UUID(commodity_id)).first()
     if db_commodity:
         db_session.delete(db_commodity)
     db_session.commit()
+

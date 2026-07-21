@@ -66,6 +66,22 @@ Professional Web Application
 
 ---
 
+The application is designed to support transportation planning and infrastructure development for a single Study Port.
+
+The Study Port is connected to multiple External Ports through inbound and outbound cargo flows.
+
+The application evaluates:
+
+- transportation requirements;
+- fleet requirements;
+- port infrastructure;
+- investment alternatives;
+- total system cost.
+
+Only the Study Port is developed.
+
+External Ports provide operational constraints and transport origins/destinations.
+
 # 2. Problem Context
 
 Permasalahan yang diselesaikan adalah perencanaan sistem transportasi laut untuk melayani perkembangan kawasan industri selama suatu planning horizon.
@@ -473,6 +489,7 @@ PLANNING OPTIMIZATION
 
 ---
 
+
 # 9. Maritime Transportation Planning Scope
 
 Modul transportasi laut mencakup:
@@ -507,6 +524,24 @@ Transport Cost
 ```
 
 ---
+
+One Project
+
+↓
+
+One Study Port
+
+↓
+
+Multiple External Ports
+
+↓
+
+Multiple Cargo Flows
+
+↓
+
+Multiple Scenarios
 
 # 10. Port and Terminal Planning Scope
 

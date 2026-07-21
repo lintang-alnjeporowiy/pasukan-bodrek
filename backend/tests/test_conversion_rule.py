@@ -156,7 +156,7 @@ def test_conversion_rule_crud_and_calculation(db_session: Session):
     assert del_res_2.status_code == 204
 
     # 12. Cleanup leftover DB commodity record
-    db_comm = db_session.query(CommodityModel).filter(CommodityModel.id == commodity_id).first()
+    db_comm = db_session.query(CommodityModel).filter(CommodityModel.id == uuid.UUID(commodity_id)).first()
     if db_comm:
         db_session.delete(db_comm)
         db_session.commit()

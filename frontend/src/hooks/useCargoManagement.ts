@@ -1,10 +1,16 @@
 import { useState, useCallback } from "react";
 import { Commodity, Tenant, CargoFlow, CargoConversionRule, ProjectionResult, ConversionTestResult } from "@/types/cargo";
+import { Route } from "@/types/route";
 import { cargoService } from "@/services/cargo.service";
 import { conversionService } from "@/services/conversion.service";
+import { routeService } from "@/services/route.service";
 
 export function useCargoManagement(projectId: string, scenarioId: string, triggerToast: (msg: string) => void) {
   const [cargoSubTab, setCargoSubTab] = useState<string>("commodities");
+
+  // Routes state
+  const [routes, setRoutes] = useState<Route[]>([]);
+  const [loadingRoutes, setLoadingRoutes] = useState<boolean>(false);
 
   // Commodities state & handlers
   const [commodities, setCommodities] = useState<Commodity[]>([]);
@@ -39,6 +45,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
   const [flowDirection, setFlowDirection] = useState<"INBOUND" | "OUTBOUND">("INBOUND");
   const [flowTenantId, setFlowTenantId] = useState<string>("");
   const [flowCommodityId, setFlowCommodityId] = useState<string>("");
+  const [flowRouteId, setFlowRouteId] = useState<string>("");
   const [flowOrigin, setFlowOrigin] = useState<string>("");
   const [flowDestination, setFlowDestination] = useState<string>("");
   const [flowDemand, setFlowDemand] = useState<string>("");
@@ -49,6 +56,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
   const [flowActive, setFlowActive] = useState<boolean>(true);
   const [flowError, setFlowError] = useState<string | null>(null);
   const [flowSaving, setFlowSaving] = useState<boolean>(false);
+
 
   // Demand Projection Modal State
   const [selectedFlowForProjection, setSelectedFlowForProjection] = useState<CargoFlow | null>(null);
@@ -103,6 +111,19 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
     }
   }, [projectId]);
 
+  const fetchRoutes = useCallback(async () => {
+    try {
+      setLoadingRoutes(true);
+      const data = await routeService.getRoutesByProject(projectId);
+      setRoutes(data);
+    } catch {
+      // ignore
+    } finally {
+      setLoadingRoutes(false);
+    }
+  }, [projectId]);
+
+
   const fetchCargoFlows = useCallback(async (dir?: string) => {
     try {
       setLoadingCargoFlows(true);
@@ -114,6 +135,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
       setLoadingCargoFlows(false);
     }
   }, [scenarioId]);
+
 
   const fetchConversionRules = useCallback(async () => {
     try {
@@ -265,10 +287,12 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
   // Cargo Flow Modal Handlers
   const handleOpenFlowModal = (direction: "INBOUND" | "OUTBOUND", flow?: CargoFlow) => {
     setFlowDirection(direction);
+    fetchRoutes();
     if (flow) {
       setEditingFlow(flow);
       setFlowTenantId(flow.tenant_id);
       setFlowCommodityId(flow.commodity_id);
+      setFlowRouteId(flow.route_id || "");
       setFlowOrigin(flow.origin);
       setFlowDestination(flow.destination_port);
       setFlowDemand(flow.base_annual_demand.toString());
@@ -281,6 +305,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
       setEditingFlow(null);
       setFlowTenantId(tenants[0]?.id || "");
       setFlowCommodityId(commodities[0]?.id || "");
+      setFlowRouteId("");
       setFlowOrigin(direction === "OUTBOUND" ? "Terminal Pelabuhan Utama" : "Batam Agro Farm");
       setFlowDestination(direction === "OUTBOUND" ? "Pelabuhan Singapura" : "Dermaga Curah Kering");
       setFlowDemand("100000");
@@ -311,6 +336,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
         await cargoService.updateCargoFlow(editingFlow.id, {
           tenant_id: flowTenantId,
           commodity_id: flowCommodityId,
+          route_id: flowRouteId || undefined,
           direction: flowDirection,
           origin: flowOrigin.trim(),
           destination_port: flowDestination.trim(),
@@ -327,6 +353,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
           scenario_id: scenarioId,
           tenant_id: flowTenantId,
           commodity_id: flowCommodityId,
+          route_id: flowRouteId || undefined,
           direction: flowDirection,
           origin: flowOrigin.trim(),
           destination_port: flowDestination.trim(),
@@ -341,6 +368,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
       }
 
       setIsFlowModalOpen(false);
+
       await fetchCargoFlows(flowDirection);
     } catch (err: any) {
       setFlowError(err.message || "Gagal menyimpan alur kargo.");
@@ -524,6 +552,9 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
     handleSaveTenant,
     handleDeleteTenant,
     // Flows
+    routes,
+    loadingRoutes,
+    fetchRoutes,
     cargoFlows,
     loadingCargoFlows,
     isFlowModalOpen,
@@ -531,6 +562,7 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
     flowDirection,
     flowTenantId,
     flowCommodityId,
+    flowRouteId,
     flowOrigin,
     flowDestination,
     flowDemand,
@@ -547,6 +579,8 @@ export function useCargoManagement(projectId: string, scenarioId: string, trigge
     setIsFlowModalOpen,
     setFlowTenantId,
     setFlowCommodityId,
+    setFlowRouteId,
+
     setFlowOrigin,
     setFlowDestination,
     setFlowDemand,

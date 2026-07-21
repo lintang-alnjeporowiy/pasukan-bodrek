@@ -28,6 +28,9 @@ export interface CargoFlow {
   tenant_name?: string;
   commodity_id: string;
   commodity_name?: string;
+  route_id?: string;
+  route_name?: string;
+  route_distance_nm?: number;
   direction: string;
   origin: string;
   destination_port: string;
@@ -40,6 +43,7 @@ export interface CargoFlow {
   created_at: string;
   updated_at: string;
 }
+
 
 export interface ProjectionYearResult {
   year: number;

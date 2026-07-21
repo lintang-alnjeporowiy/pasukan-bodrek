@@ -5,6 +5,10 @@ from src.api.routes.tenant import router as tenant_router
 from src.api.routes.cargo_flow import router as cargo_flow_router
 from src.api.routes.cargo_conversion_rule import router as cargo_conversion_rule_router
 from src.api.routes.scenario_parameter import router as scenario_parameter_router
+from src.api.routes.study_port import router as study_port_router
+from src.api.routes.external_port import router as external_port_router
+from src.api.routes.bathymetry import router as bathymetry_router
+from src.api.routes.route import router as route_router
 
 __all__ = [
     "project_router",
@@ -14,4 +18,8 @@ __all__ = [
     "cargo_flow_router",
     "cargo_conversion_rule_router",
     "scenario_parameter_router",
+    "study_port_router",
+    "external_port_router",
+    "bathymetry_router",
+    "route_router",
 ]

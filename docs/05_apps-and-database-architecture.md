@@ -623,7 +623,9 @@ Project
 ├── Planning Horizon
 ├── Reference Data
 ├── Cargo Flows
-├── Ports
+├── Study Port
+├── External Ports
+└── Parameters
 ├── Routes
 └── Scenarios
 ```
@@ -685,6 +687,27 @@ Ketiganya tidak boleh dicampur dalam satu tabel.
 ---
 
 # 10. Database Schema Overview
+
+## Database Recommendation
+
+Walaupun domain membedakan Study Port dan External Port, implementasi database direkomendasikan menggunakan satu tabel:
+
+ports
+
+dengan atribut:
+
+role
+
+Nilai yang didukung:
+
+- STUDY_PORT
+- EXTERNAL_PORT
+
+Setiap Project harus memiliki tepat satu port dengan role:
+
+STUDY_PORT
+
+Sedangkan jumlah EXTERNAL_PORT tidak dibatasi.
 
 ```text
 PROJECT
@@ -1144,6 +1167,38 @@ ship_cargo_compatibilities
 ```
 
 ---
+
+# 14.5 Koreksi tentang Pelabuhan
+## Study Port Architecture
+
+Secara konseptual aplikasi membedakan dua jenis pelabuhan.
+
+Study Port
+
+Merupakan pelabuhan yang sedang direncanakan.
+
+Satu project hanya memiliki satu Study Port.
+
+Semua hasil engineering disimpan pada Study Port.
+
+External Port
+
+Merupakan pelabuhan referensi untuk aktivitas inbound maupun outbound.
+
+External Port tidak memiliki hasil pengembangan.
+
+Diagram hubungan:
+
+Project
+│
+├── Study Port
+│      ├── Bathymetry
+│      ├── Terminal
+│      ├── Equipment
+│      ├── Infrastructure
+│      └── Development
+│
+└── External Ports
 
 # 15. Equipment Reference Data
 

@@ -1,5 +1,7 @@
 import pytest
+import uuid
 from fastapi.testclient import TestClient
+
 from src.main import app
 from src.infrastructure.database.session import SessionLocal
 from src.infrastructure.database.models.project import ProjectModel
@@ -92,7 +94,7 @@ def test_scenario_lifecycle(db_session):
     assert len(list_response_2.json()) == 0
 
     # 7. Clean up the database project record
-    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == uuid.UUID(project_id)).first()
     if db_project:
         db_session.delete(db_project)
     db_session.commit()

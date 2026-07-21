@@ -2,6 +2,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from uuid import UUID
 from datetime import datetime
 from typing import Optional
+from src.domain.study_port.schemas import StudyPortCreate, StudyPortResponse
 
 class ProjectBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -11,7 +12,8 @@ class ProjectBase(BaseModel):
     planning_horizon: int = Field(..., ge=1, le=100)
 
 class ProjectCreate(ProjectBase):
-    pass
+    study_port: Optional[StudyPortCreate] = None
+    copy_study_port_from_project_id: Optional[UUID] = None
 
 class ProjectUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -24,5 +26,6 @@ class ProjectDomain(ProjectBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+    study_port: Optional[StudyPortResponse] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -18,6 +18,15 @@ export const ProjectListWorkspace: React.FC = () => {
     newProjectDesc,
     newBaseYear,
     newPlanningHorizon,
+    portMode,
+    portName,
+    portCode,
+    portLocation,
+    portLat,
+    portLong,
+    portDesc,
+    copySourceProjectId,
+    samplePorts,
     creating,
     createError,
     setIsModalOpen,
@@ -25,6 +34,14 @@ export const ProjectListWorkspace: React.FC = () => {
     setNewProjectDesc,
     setNewBaseYear,
     setNewPlanningHorizon,
+    setPortMode,
+    setPortName,
+    setPortCode,
+    setPortLocation,
+    setPortLat,
+    setPortLong,
+    setPortDesc,
+    setCopySourceProjectId,
     handleCreateProject,
   } = useProjects();
 
@@ -109,6 +126,12 @@ export const ProjectListWorkspace: React.FC = () => {
                   <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
                     {project.description || "Tidak ada deskripsi tambahan."}
                   </p>
+                  {project.study_port && (
+                    <div className="text-xs text-cyan-400/90 flex items-center gap-1.5 pt-1">
+                      <span>⚓</span>
+                      <span>Study Port: <strong>{project.study_port.name}</strong> ({project.study_port.location})</span>
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-6 border-t border-slate-900/80 flex items-center justify-between mt-6 text-xs text-slate-500 font-mono">
@@ -135,6 +158,15 @@ export const ProjectListWorkspace: React.FC = () => {
         description={newProjectDesc}
         baseYear={newBaseYear}
         planningHorizon={newPlanningHorizon}
+        portMode={portMode}
+        portName={portName}
+        portCode={portCode}
+        portLocation={portLocation}
+        portLat={portLat}
+        portLong={portLong}
+        portDesc={portDesc}
+        copySourceProjectId={copySourceProjectId}
+        samplePorts={samplePorts}
         creating={creating}
         error={createError}
         onClose={() => setIsModalOpen(false)}
@@ -142,6 +174,14 @@ export const ProjectListWorkspace: React.FC = () => {
         setDescription={setNewProjectDesc}
         setBaseYear={setNewBaseYear}
         setPlanningHorizon={setNewPlanningHorizon}
+        setPortMode={setPortMode}
+        setPortName={setPortName}
+        setPortCode={setPortCode}
+        setPortLocation={setPortLocation}
+        setPortLat={setPortLat}
+        setPortLong={setPortLong}
+        setPortDesc={setPortDesc}
+        setCopySourceProjectId={setCopySourceProjectId}
         onSubmit={handleCreateProject}
       />
     </div>

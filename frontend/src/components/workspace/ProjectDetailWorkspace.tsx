@@ -4,6 +4,7 @@ import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { Toast } from "@/components/common/Toast";
 import { NewScenarioModal } from "@/components/dialogs/NewScenarioModal";
+import { StudyPortCard } from "@/components/workspace/StudyPortCard";
 import { useProjectDetail } from "@/hooks/useProjectDetail";
 
 interface ProjectDetailWorkspaceProps {
@@ -29,6 +30,7 @@ export const ProjectDetailWorkspace: React.FC<ProjectDetailWorkspaceProps> = ({ 
     setNewScenarioDesc,
     setParentScenarioId,
     handleCreateScenario,
+    refreshData,
   } = useProjectDetail(projectId);
 
   return (
@@ -86,6 +88,15 @@ export const ProjectDetailWorkspace: React.FC<ProjectDetailWorkspaceProps> = ({ 
             </div>
           </div>
         </div>
+
+        {/* Study Port Card Component */}
+        {project && (
+          <StudyPortCard
+            projectId={project.id}
+            studyPort={project.study_port || null}
+            onUpdated={() => refreshData()}
+          />
+        )}
 
         {/* Error Alert */}
         {error && (

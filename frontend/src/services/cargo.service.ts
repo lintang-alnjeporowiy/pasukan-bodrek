@@ -91,6 +91,7 @@ export const cargoService = {
     scenario_id: string;
     tenant_id: string;
     commodity_id: string;
+    route_id?: string;
     direction: string;
     origin: string;
     destination_port: string;
@@ -106,6 +107,7 @@ export const cargoService = {
       body: JSON.stringify(data),
     });
   },
+
 
   async updateCargoFlow(
     id: string,

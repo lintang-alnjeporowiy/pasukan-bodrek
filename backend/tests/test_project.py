@@ -1,5 +1,7 @@
 import pytest
+import uuid
 from uuid import uuid4
+
 from fastapi.testclient import TestClient
 from src.main import app
 from src.infrastructure.database.session import SessionLocal
@@ -72,7 +74,7 @@ def test_project_lifecycle(db_session):
     assert get_response_2.json()["name"] == "Test Project Pelabuhan Updated"
 
     # 5. Clean up the database record
-    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == uuid.UUID(project_id)).first()
     if db_project:
         db_session.delete(db_project)
         db_session.commit()

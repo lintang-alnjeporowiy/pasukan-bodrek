@@ -68,6 +68,7 @@ export const CargoFlowTable: React.FC<CargoFlowTableProps> = ({
                 <tr>
                   <th className="px-6 py-4">Tenant</th>
                   <th className="px-6 py-4">Komoditas</th>
+                  <th className="px-6 py-4">Rute Pelayaran</th>
                   <th className="px-6 py-4">Asal &rarr; Tujuan</th>
                   <th className="px-6 py-4 text-right">Base Demand</th>
                   <th className="px-6 py-4">Growth Rate</th>
@@ -84,9 +85,19 @@ export const CargoFlowTable: React.FC<CargoFlowTableProps> = ({
                         {f.commodity_name || f.commodity_id}
                       </span>
                     </td>
+                    <td className="px-6 py-4 text-xs font-medium text-slate-300">
+                      {f.route_name ? (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                          🚢 {f.route_name} ({f.route_distance_nm} NM)
+                        </span>
+                      ) : (
+                        <span className="text-slate-500 italic text-[11px]">Belum di-assign</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-xs font-mono text-slate-300">
                       {f.origin} &rarr; {f.destination_port}
                     </td>
+
                     <td className="px-6 py-4 text-right font-mono font-bold text-slate-100">
                       {f.base_annual_demand.toLocaleString("id-ID")}{" "}
                       <span className="text-xs font-normal text-slate-400">{f.unit}</span>

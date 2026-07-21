@@ -25,6 +25,10 @@ from src.api.routes import (
     cargo_flow_router,
     cargo_conversion_rule_router,
     scenario_parameter_router,
+    study_port_router,
+    external_port_router,
+    bathymetry_router,
+    route_router,
 )
 app.include_router(project_router)
 app.include_router(scenario_router)
@@ -33,6 +37,10 @@ app.include_router(tenant_router)
 app.include_router(cargo_flow_router)
 app.include_router(cargo_conversion_rule_router)
 app.include_router(scenario_parameter_router)
+app.include_router(study_port_router)
+app.include_router(external_port_router)
+app.include_router(bathymetry_router)
+app.include_router(route_router)
 
 @app.get("/health")
 def health_check():
@@ -40,4 +48,3 @@ def health_check():
     if not db_connected:
         raise HTTPException(status_code=503, detail="Database connection is unavailable")
     return {"status": "ok", "database": "connected"}
-

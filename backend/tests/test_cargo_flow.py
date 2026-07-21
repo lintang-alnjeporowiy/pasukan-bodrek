@@ -164,19 +164,109 @@ def test_cargo_flow_lifecycle(db_session):
     assert outbound_id not in [f["id"] for f in list_res_2.json()]
 
     # Cleanup leftover DB records
-    db_flow = db_session.query(CargoFlowModel).filter(CargoFlowModel.id == flow_id).first()
+    db_flow = db_session.query(CargoFlowModel).filter(CargoFlowModel.id == uuid.UUID(flow_id)).first()
     if db_flow:
         db_session.delete(db_flow)
-    db_tenant = db_session.query(TenantModel).filter(TenantModel.id == tenant_id).first()
+    db_tenant = db_session.query(TenantModel).filter(TenantModel.id == uuid.UUID(tenant_id)).first()
     if db_tenant:
         db_session.delete(db_tenant)
-    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == commodity_id).first()
+    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == uuid.UUID(commodity_id)).first()
     if db_commodity:
         db_session.delete(db_commodity)
-    db_scenario = db_session.query(ScenarioModel).filter(ScenarioModel.id == scenario_id).first()
+    db_scenario = db_session.query(ScenarioModel).filter(ScenarioModel.id == uuid.UUID(scenario_id)).first()
     if db_scenario:
         db_session.delete(db_scenario)
-    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == project_id).first()
+    db_project = db_session.query(ProjectModel).filter(ProjectModel.id == uuid.UUID(project_id)).first()
     if db_project:
         db_session.delete(db_project)
     db_session.commit()
+
+
+def test_cargo_flow_route_assignment(db_session):
+    """Test assigning routes to cargo flows with validation (direction matching & active status)."""
+    # 1. Setup Project, Study Port, External Ports
+    proj_res = client.post("/projects", json={"name": "Route Assign Test Proj", "base_year": 2026, "planning_horizon": 20})
+    assert proj_res.status_code == 201
+    project_id = proj_res.json()["id"]
+
+    study_res = client.post(f"/projects/{project_id}/study-port", json={
+        "name": "Kupang Main Study Port",
+        "location": "Kupang",
+        "latitude": -10.16,
+        "longitude": 123.58
+    })
+    assert study_res.status_code == 201
+
+
+    ext1_res = client.post("/external-ports", json={"name": "Singapore Port", "country": "Singapore", "latitude": 1.35, "longitude": 103.8, "max_draft": 15.0, "max_loa": 300.0, "cargo_productivity": 1000.0, "productivity_unit": "Ton/Hour", "additional_port_time": 12.0})
+    assert ext1_res.status_code == 201
+    ext1_id = ext1_res.json()["id"]
+
+    ext2_res = client.post("/external-ports", json={"name": "Surabaya Port", "country": "Indonesia", "latitude": -7.2, "longitude": 112.7, "max_draft": 12.0, "max_loa": 250.0, "cargo_productivity": 800.0, "productivity_unit": "Ton/Hour", "additional_port_time": 10.0})
+    assert ext2_res.status_code == 201
+    ext2_id = ext2_res.json()["id"]
+
+
+    # 2. Create Routes
+    # Route A: INBOUND, Active
+    route_inbound_res = client.post(f"/projects/{project_id}/routes", json={"name": "Singapore -> Kupang Inbound", "direction": "INBOUND", "external_port_id": ext1_id, "distance_nm": 1200.0, "is_active": True})
+    assert route_inbound_res.status_code == 201
+    inbound_route_id = route_inbound_res.json()["id"]
+
+    # Route B: OUTBOUND, Active
+    route_outbound_res = client.post(f"/projects/{project_id}/routes", json={"name": "Kupang -> Surabaya Outbound", "direction": "OUTBOUND", "external_port_id": ext2_id, "distance_nm": 500.0, "is_active": True})
+    assert route_outbound_res.status_code == 201
+    outbound_route_id = route_outbound_res.json()["id"]
+
+    # Route C: INBOUND, Inactive
+    route_inactive_res = client.post(f"/projects/{project_id}/routes", json={"name": "Inactive Inbound Route", "direction": "INBOUND", "external_port_id": ext1_id, "distance_nm": 1100.0, "is_active": False})
+    assert route_inactive_res.status_code == 201
+    inactive_route_id = route_inactive_res.json()["id"]
+
+    # 3. Create Scenario, Commodity, Tenant
+    scen_res = client.post("/scenarios", json={"project_id": project_id, "name": "Scenario Route Test"})
+    scenario_id = scen_res.json()["id"]
+
+    comm_res = client.post("/commodities", json={"name": "Coal", "unit": "Ton"})
+    commodity_id = comm_res.json()["id"]
+
+    tenant_res = client.post(f"/projects/{project_id}/tenants", json={"name": "PLN Power Plant", "commodity_id": commodity_id})
+    tenant_id = tenant_res.json()["id"]
+
+    # 4. Test Valid Assignment (Inbound Flow + Inbound Active Route)
+    flow_payload = {
+        "tenant_id": tenant_id,
+        "commodity_id": commodity_id,
+        "route_id": inbound_route_id,
+        "direction": "INBOUND",
+        "origin": "Singapore Port",
+        "destination_port": "PLN Jetty",
+        "base_annual_demand": 300000.0,
+        "unit": "Ton"
+    }
+    flow_res = client.post(f"/scenarios/{scenario_id}/cargo-flows", json=flow_payload)
+    assert flow_res.status_code == 201
+    flow_data = flow_res.json()
+    assert flow_data["route_id"] == inbound_route_id
+    assert flow_data["route_name"] == "Singapore -> Kupang Inbound"
+    assert flow_data["route_distance_nm"] == 1200.0
+    flow_id = flow_data["id"]
+
+    # 5. Test Invalid Assignment: Direction Mismatch (Inbound Flow + Outbound Route)
+    invalid_dir_payload = {
+        "route_id": outbound_route_id
+    }
+    mismatch_res = client.patch(f"/cargo-flows/{flow_id}", json=invalid_dir_payload)
+    assert mismatch_res.status_code == 400
+    assert "tidak cocok" in mismatch_res.json()["detail"]
+
+    # 6. Test Invalid Assignment: Inactive Route
+    inactive_res = client.patch(f"/cargo-flows/{flow_id}", json={"route_id": inactive_route_id})
+    assert inactive_res.status_code == 400
+    assert "tidak aktif" in inactive_res.json()["detail"]
+
+    # 7. Cleanup
+    client.delete(f"/cargo-flows/{flow_id}")
+    client.delete(f"/projects/{project_id}")
+
+

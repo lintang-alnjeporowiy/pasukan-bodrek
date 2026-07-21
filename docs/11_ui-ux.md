@@ -149,7 +149,12 @@ Projects
 Project Workspace
     ├── Overview
     ├── Cargo
-    ├── Ports
+    ├── Study Ports
+        ├── Overview
+        ├── Bathymetry
+        ├── Terminal
+        ├── Infrastucture
+    ├── External Ports
     ├── Fleet
     ├── Equipment
     ├── Infrastructure
@@ -329,13 +334,13 @@ Step 2
 Tenants and Cargo
 
 Step 3
-Ports and Routes
+Study Port
 
 Step 4
-Ship Candidates
+External Ports
 
 Step 5
-Equipment Candidates
+Routes
 
 Step 6
 Planning Parameters
@@ -571,12 +576,25 @@ where outbound demand comes from.
 
 ---
 
-# 15. Ports Page
+# 15. Study Ports Page
+
+Study Port merupakan pusat seluruh aktivitas engineering.
+
+Semua hasil perhitungan infrastruktur ditampilkan pada workspace ini.
+
+Submenu:
+
+- Overview
+- Bathymetry
+- Terminal
+- Waterside
+- Landside
+- Development
 
 Navigation:
 
 ```text
-Ports
+Study Port
 ```
 
 Tabs:
@@ -604,6 +622,29 @@ Actions:
 ```
 
 ---
+
+## External Ports
+
+Workspace ini digunakan untuk mengelola seluruh pelabuhan asal dan tujuan cargo.
+
+Data yang dapat diubah:
+
+- Port Information
+- Maximum Draft
+- Maximum LOA
+- Productivity
+- Additional Port Time
+- Tariff
+
+External Port tidak memiliki:
+
+- Bathymetry
+- Terminal Development
+- Berth Development
+- Waterside Infrastructure
+- Landside Infrastructure
+
+karena seluruh pengembangan hanya dilakukan pada Study Port.
 
 # 16. Add Port
 
@@ -685,7 +726,7 @@ Destination Port
 
 ## Ports Workspace — Bathymetry
 
-Each port development location must provide access to:
+study port development location must provide access to:
 
 ```text
 Port
@@ -2863,7 +2904,8 @@ DEFINE THE SYSTEM
         ↓
 Tenant
 Cargo
-Port
+Study Port
+External Port
 Route
 
 DEFINE THE ALTERNATIVES

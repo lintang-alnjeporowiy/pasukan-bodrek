@@ -1,23 +1,16 @@
 # Agent Instructions & Guidelines
 
-Berikut adalah instruksi dasar mengenai apa yang boleh dan tidak boleh dilakukan oleh agent dalam project ini:
+Instruksi dan aturan wajib bagi AI Agent dalam project ini:
 
-1. **Dokumentasi & Konteks Project:**
-   - Dokumentasi teknis, model domain, spesifikasi kalkulasi, dan aturan bisnis berada di folder `/docs`. Jika terdapat konteks atau informasi project yang belum lengkap, silakan cari dan rujuk dokumen yang ada di dalam folder tersebut.
-   - **PENTING:** Agen **TIDAK BOLEH mengubah/mengedit/menghapus** isi file di dalam folder `/docs` tanpa izin atau perintah langsung dari pengguna.
-   - Jika bingung mengenai konteks, agen bisa melihat file `KNOWLEDGE.md` untuk membaca rangkuman konteks singkatnya.
+1. **Dokumentasi (`/docs` & `KNOWLEDGE.md`):**
+   - Rujukan teknis, spesifikasi, dan aturan bisnis berada di `/docs`. **DILARANG** mengedit/menghapus isi `/docs` tanpa perintah langsung.
+   - Gunakan `KNOWLEDGE.md` untuk ringkasan konteks cepat. **WAJIB** perbarui `KNOWLEDGE.md` setelah menyelesaikan phase besar.
 
-2. **Penggunaan Browser & Screenshot (Hemat Token):**
-   - **Harus Konfirmasi:** Agent wajib meminta konfirmasi/izin kepada pengguna sebelum membuka browser (`browser_subagent`).
-   - **Batasi Screenshot:** Tidak perlu mengambil screenshot halaman web kecuali jika sangat penting atau diminta oleh pengguna, guna menghemat penggunaan token.
+2. **Penggunaan Browser & Screenshot:**
+   - Wajib konfirmasi pengguna sebelum memakai `browser_subagent`. Batasi screenshot untuk menghemat token.
 
-3. **Pembaruan Dokumen Konteks (`KNOWLEDGE.md`):**
-   - Setiap kali selesai melakukan pengembangan besar (misal Phase 3, Phase 4, atau Phase 5; detail tahapan mengacu pada `project.md`), agen/model wajib memperbarui file `KNOWLEDGE.md` dengan ringkasan yang singkat dan padat (concise) sebagai sarana transfer konteks antar-model.
-
-4. **Architecture Preservation Rule:**
-   - Selama implementasi phase berikutnya, AI **TIDAK BOLEH** menambahkan logika baru ke file yang sudah besar hanya karena lebih mudah.
-   - Jika sebuah fitur baru membuat file melebihi batas ukuran atau melanggar Single Responsibility Principle (SRP), AI **WAJIB** membuat komponen, hook, service, repository, atau calculator baru.
-   - Refactoring kecil yang diperlukan untuk menjaga arsitektur tetap bersih dianggap sebagai bagian dari implementasi phase tersebut, bukan pekerjaan terpisah.
+3. **Architecture Preservation & File Limits:**
+   - Wajib menjaga Single Responsibility Principle (SRP). Dilarang menumpuk logika pada file besar.
    - **Batas Ukuran File:**
      - `page.tsx`: Max ±50 baris (hanya route entry point)
      - `Workspace`: Max ±250 baris
@@ -25,14 +18,15 @@ Berikut adalah instruksi dasar mengenai apa yang boleh dan tidak boleh dilakukan
      - `Controller / Route Backend`: Max ±100–150 baris
      - `Repository Backend`: Max ±100–150 baris
 
-5. **Panduan Testing & Environment Variables (Bebas Trial & Error):**
-   - **Menjalankan Unit/Integration Test Backend:**
-     - Masuk ke directory `backend/` dan jalankan:
-       `PYTHONPATH=. .venv/bin/pytest`
-   - **Verifikasi Build Frontend:**
-     - Dari root workspace, gunakan Nix environment untuk menjalankan npm build:
-       `nix develop --command bash -c "cd frontend && npm run build"`
-   - **Environment Variables:**
-     - **Frontend:** `NEXT_PUBLIC_API_URL` (Default: `http://localhost:8000`).
-     - **Backend:** `backend/.env` (Tersedia file `.env.example` sebagai referensi).
+4. **Strict PostgreSQL & Migration Policy:**
+   - **PostgreSQL adalah SATU-SATUNYA database resmi** untuk Development, Testing, Migrasi, dan Production.
+   - **DILARANG KERAS** menggunakan SQLite (`sqlite://`, `test.db`, temporary SQLite), maupun mengubah `DATABASE_URL` menjadi SQLite.
+   - **Jika PostgreSQL tidak dapat diakses/error**: BERHENTI, jelaskan kendala, berikan panduan perbaikan (`./scripts/db_control.sh start`), dan tunggu hingga masalah terselesaikan. Dilarang switch otomatis ke SQLite.
+   - **Alembic Migration & Testing**: Wajib dijalankan di atas database PostgreSQL. Sukses migrasi/test pada SQLite **TIDAK** memvalidasi kompatibilitas PostgreSQL.
 
+5. **Panduan Testing & Commands (Nix Environment):**
+   - **Start Database**: `./scripts/db_control.sh start`
+   - **Backend Pytest**: `nix develop --command bash -c "cd backend && PYTHONPATH=. .venv/bin/pytest"`
+   - **Alembic Migration**: `nix develop --command bash -c "cd backend && PYTHONPATH=. .venv/bin/alembic upgrade head"`
+   - **Frontend Build**: `nix develop --command bash -c "cd frontend && npm run build"`
+   - **Environment Variables**: Backend (`backend/.env`), Frontend (`NEXT_PUBLIC_API_URL`).

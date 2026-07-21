@@ -1,6 +1,6 @@
 from uuid import UUID
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from src.infrastructure.database.models.cargo_flow import CargoFlowModel
 from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowUpdate
 
@@ -11,12 +11,29 @@ class CargoFlowRepository:
         self.db = db
 
     def get_by_id(self, cargo_flow_id: UUID) -> Optional[CargoFlowModel]:
-        """Retrieve a cargo flow by its unique ID."""
-        return self.db.query(CargoFlowModel).filter(CargoFlowModel.id == cargo_flow_id).first()
+        """Retrieve a cargo flow by its unique ID with relationships."""
+        return (
+            self.db.query(CargoFlowModel)
+            .options(
+                joinedload(CargoFlowModel.tenant),
+                joinedload(CargoFlowModel.commodity),
+                joinedload(CargoFlowModel.route),
+            )
+            .filter(CargoFlowModel.id == cargo_flow_id)
+            .first()
+        )
 
     def list_by_scenario(self, scenario_id: UUID, direction: Optional[str] = None) -> List[CargoFlowModel]:
         """List cargo flows belonging to a specific scenario, optionally filtered by direction."""
-        query = self.db.query(CargoFlowModel).filter(CargoFlowModel.scenario_id == scenario_id)
+        query = (
+            self.db.query(CargoFlowModel)
+            .options(
+                joinedload(CargoFlowModel.tenant),
+                joinedload(CargoFlowModel.commodity),
+                joinedload(CargoFlowModel.route),
+            )
+            .filter(CargoFlowModel.scenario_id == scenario_id)
+        )
         if direction:
             query = query.filter(CargoFlowModel.direction == direction)
         return query.order_by(CargoFlowModel.created_at.asc()).all()
@@ -27,6 +44,7 @@ class CargoFlowRepository:
             scenario_id=scenario_id,
             tenant_id=flow_in.tenant_id,
             commodity_id=flow_in.commodity_id,
+            route_id=flow_in.route_id,
             direction=flow_in.direction,
             origin=flow_in.origin,
             destination_port=flow_in.destination_port,
@@ -40,7 +58,7 @@ class CargoFlowRepository:
         self.db.add(db_flow)
         self.db.commit()
         self.db.refresh(db_flow)
-        return db_flow
+        return self.get_by_id(db_flow.id) or db_flow
 
     def update(self, db_flow: CargoFlowModel, flow_in: CargoFlowUpdate) -> CargoFlowModel:
         """Update an existing cargo flow."""
@@ -49,7 +67,7 @@ class CargoFlowRepository:
             setattr(db_flow, field, value)
         self.db.commit()
         self.db.refresh(db_flow)
-        return db_flow
+        return self.get_by_id(db_flow.id) or db_flow
 
     def delete(self, db_flow: CargoFlowModel) -> None:
         """Delete a cargo flow."""

@@ -113,6 +113,32 @@ test_case:
 
 ---
 
+## Project Structure Validation
+
+Expected Project Structure
+
+Study Port
+
+KEK Gresik
+
+External Ports
+
+- Port A
+- Port B
+- Port C
+- Port D
+- Port E
+
+Validation
+
+✓ Exactly one Study Port exists.
+
+✓ Every Route references the Study Port.
+
+✓ Every Cargo Flow starts or ends at the Study Port.
+
+✓ No Route exists between two External Ports.
+
 # 4. Required Decision Vector
 
 Untuk calculation verification, keputusan tidak boleh dicari ulang oleh optimizer.

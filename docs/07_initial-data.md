@@ -72,6 +72,46 @@ Development Modes
 Units
 Constraint Definitions
 ```
+### Study Port
+
+Setiap Project harus memiliki tepat satu Study Port.
+
+Study Port merupakan pelabuhan yang menjadi objek perencanaan.
+
+Semua hasil engineering akan dihitung terhadap Study Port, meliputi:
+
+- Bathymetry
+- Terminal
+- Cargo Handling Equipment
+- Berth
+- Waterside Infrastructure
+- Landside Infrastructure
+- Port Development
+
+Study Port bersifat unik untuk setiap Project.
+
+### External Ports
+
+External Port merupakan pelabuhan asal maupun tujuan dari Cargo Flow.
+
+External Port hanya menyediakan data operasional yang digunakan dalam perhitungan transportasi.
+
+Data minimum:
+
+- Port Name
+- Country
+- Maximum Draft
+- Maximum LOA
+- Cargo Productivity
+- Additional Port Time
+- Port Tariff
+
+External Port tidak memiliki:
+
+- Bathymetry
+- Infrastructure Planning
+- Port Development
+- Investment Planning
 
 ## Layer 2 — Reference Project
 
@@ -323,7 +363,7 @@ karena data tersebut digunakan dalam pemilihan kapal dan optimization model.
 
 # 7. Ports
 
-## 7.1 Central Planning Port
+## 7.1 Study Port
 
 ```yaml
 ports:
@@ -341,7 +381,7 @@ Jangan menggabungkan keduanya menjadi satu nilai.
 
 ---
 
-## 7.2 Inbound Origin Ports
+## 7.2 Inbound Origin Ports (External)
 
 | Code | Port | Location Reference | Depth (m) | Berth Length (m) | Max LOA (m) | Cargo | Productivity | Equipment Qty | AT+WT+IT |
 |---|---|---|---:|---:|---:|---|---:|---:|---:|
@@ -423,7 +463,7 @@ ports:
 
 ---
 
-## 7.3 Outbound Destination Ports
+## 7.3 Outbound Destination Ports (EXTERNAL)
 
 | Code | Port | Location Reference | Depth (m) | Berth Length (m) | Max LOA (m) | Cargo | Productivity | Equipment Qty | AT+WT+IT |
 |---|---|---|---:|---:|---:|---|---:|---:|---:|

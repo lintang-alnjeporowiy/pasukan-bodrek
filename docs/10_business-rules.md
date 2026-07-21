@@ -156,6 +156,53 @@ Scenario B
 
 ---
 
+# BR-PROJECT-001 — Exactly One Study Port
+
+Every Project shall contain exactly one Study Port.
+
+All engineering calculations shall reference this Study Port.
+
+A Project without a Study Port is not calculation-ready.
+
+# BR-PORT-001 — External Port Role
+
+External Ports are operational reference ports.
+
+External Ports provide:
+
+- Operational constraints
+- Operational productivity
+- Existing infrastructure limits
+
+External Ports shall not be used for:
+
+- Bathymetry Planning
+- Berth Planning
+- Port Development
+- Infrastructure Investment
+
+# BR-ROUTE-001 — Route Structure
+
+Every Cargo Flow shall connect:
+
+Study Port
+
+↓
+
+External Port
+
+or
+
+External Port
+
+↓
+
+Study Port
+
+Routes connecting two External Ports are invalid.
+
+Routes connecting the Study Port to itself are invalid.
+
 # 5. Scenario Independence
 
 Setiap scenario dapat memiliki perbedaan pada:

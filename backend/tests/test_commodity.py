@@ -1,4 +1,5 @@
 import pytest
+import uuid
 from fastapi.testclient import TestClient
 from src.main import app
 from src.infrastructure.database.session import SessionLocal
@@ -80,7 +81,7 @@ def test_commodity_lifecycle(db_session):
     assert commodity_id not in commodity_ids_2
 
     # 6. Clean up the database record if still exists
-    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == commodity_id).first()
+    db_commodity = db_session.query(CommodityModel).filter(CommodityModel.id == uuid.UUID(commodity_id)).first()
     if db_commodity:
         db_session.delete(db_commodity)
         db_session.commit()

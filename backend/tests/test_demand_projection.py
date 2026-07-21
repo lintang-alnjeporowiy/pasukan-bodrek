@@ -1,5 +1,7 @@
 import pytest
+import uuid
 from uuid import uuid4
+
 from fastapi.testclient import TestClient
 from src.main import app
 from src.infrastructure.database.session import SessionLocal
@@ -149,7 +151,7 @@ def test_api_projection_endpoint(db_session):
     assert data["projections"][4]["demand"] == 1080.0
 
     # Cleanup leftover DB records
-    db_flow = db_session.query(CargoFlowModel).filter(CargoFlowModel.id == flow_id).first()
+    db_flow = db_session.query(CargoFlowModel).filter(CargoFlowModel.id == uuid.UUID(flow_id)).first()
     if db_flow:
         db_session.delete(db_flow)
     db_tenant = db_session.query(TenantModel).filter(TenantModel.id == tenant.id).first()
@@ -165,3 +167,4 @@ def test_api_projection_endpoint(db_session):
     if db_project:
         db_session.delete(db_project)
     db_session.commit()
+

@@ -1,7 +1,9 @@
 from uuid import UUID
 from typing import List, Optional
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 from src.infrastructure.repositories.cargo_flow import CargoFlowRepository
+from src.infrastructure.repositories.route import RouteRepository
 from src.infrastructure.database.models.cargo_flow import CargoFlowModel
 from src.domain.cargo_flow.models import CargoFlowCreate, CargoFlowUpdate, CargoFlowDomain, ProjectionResult
 
@@ -10,6 +12,7 @@ class CargoFlowService:
 
     def __init__(self, db: Session):
         self.repository = CargoFlowRepository(db)
+        self.route_repo = RouteRepository(db)
 
     def _map_to_domain(self, db_flow: CargoFlowModel) -> CargoFlowDomain:
         domain = CargoFlowDomain.model_validate(db_flow)
@@ -17,10 +20,34 @@ class CargoFlowService:
             domain.tenant_name = db_flow.tenant.name
         if db_flow.commodity:
             domain.commodity_name = db_flow.commodity.name
+        if db_flow.route:
+            domain.route_name = db_flow.route.name
+            domain.route_distance_nm = db_flow.route.distance_nm
         return domain
+
+    def _validate_route(self, route_id: UUID, target_direction: str):
+        route = self.route_repo.get_by_id(route_id)
+        if not route:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Rute Pelayaran dengan ID {route_id} tidak ditemukan"
+            )
+        if not route.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Rute Pelayaran tidak aktif dan tidak dapat digunakan"
+            )
+        if route.direction.upper() != target_direction.upper():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Direction Rute ({route.direction}) tidak cocok dengan Direction Cargo Flow ({target_direction})"
+            )
 
     def create_cargo_flow(self, scenario_id: UUID, flow_in: CargoFlowCreate) -> CargoFlowDomain:
         """Business logic for creating a new cargo flow."""
+        if flow_in.route_id:
+            self._validate_route(flow_in.route_id, flow_in.direction)
+
         db_flow = self.repository.create(scenario_id, flow_in)
         return self._map_to_domain(db_flow)
 
@@ -41,6 +68,13 @@ class CargoFlowService:
         db_flow = self.repository.get_by_id(cargo_flow_id)
         if not db_flow:
             return None
+
+        effective_direction = flow_in.direction if flow_in.direction is not None else db_flow.direction
+        effective_route_id = flow_in.route_id if flow_in.route_id is not None else db_flow.route_id
+
+        if effective_route_id:
+            self._validate_route(effective_route_id, effective_direction)
+
         db_flow = self.repository.update(db_flow, flow_in)
         return self._map_to_domain(db_flow)
 

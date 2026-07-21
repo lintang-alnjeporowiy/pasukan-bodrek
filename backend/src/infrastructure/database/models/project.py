@@ -20,3 +20,5 @@ class ProjectModel(Base):
     # Relationships
     scenarios = relationship("ScenarioModel", back_populates="project", cascade="all, delete-orphan")
     tenants = relationship("TenantModel", back_populates="project", cascade="all, delete-orphan")
+    study_port = relationship("StudyPortModel", back_populates="project", uselist=False, cascade="all, delete-orphan")
+

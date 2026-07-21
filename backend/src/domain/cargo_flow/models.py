@@ -6,6 +6,7 @@ from typing import Optional, List
 class CargoFlowBase(BaseModel):
     tenant_id: UUID
     commodity_id: UUID
+    route_id: Optional[UUID] = None
     direction: str = "INBOUND"
     origin: str = Field(..., min_length=1, max_length=255)
     destination_port: str = Field(..., min_length=1, max_length=255)
@@ -22,6 +23,7 @@ class CargoFlowCreate(CargoFlowBase):
 class CargoFlowUpdate(BaseModel):
     tenant_id: Optional[UUID] = None
     commodity_id: Optional[UUID] = None
+    route_id: Optional[UUID] = None
     direction: Optional[str] = None
     origin: Optional[str] = Field(None, min_length=1, max_length=255)
     destination_port: Optional[str] = Field(None, min_length=1, max_length=255)
@@ -37,6 +39,8 @@ class CargoFlowDomain(CargoFlowBase):
     scenario_id: UUID
     tenant_name: Optional[str] = None
     commodity_name: Optional[str] = None
+    route_name: Optional[str] = None
+    route_distance_nm: Optional[float] = None
     created_at: datetime
     updated_at: datetime
 

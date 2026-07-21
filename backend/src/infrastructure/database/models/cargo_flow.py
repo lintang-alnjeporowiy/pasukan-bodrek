@@ -12,6 +12,7 @@ class CargoFlowModel(Base):
     scenario_id = Column(UUID(as_uuid=True), ForeignKey("scenarios.id", ondelete="CASCADE"), nullable=False)
     tenant_id = Column(UUID(as_uuid=True), ForeignKey("tenants.id", ondelete="CASCADE"), nullable=False)
     commodity_id = Column(UUID(as_uuid=True), ForeignKey("commodities.id", ondelete="CASCADE"), nullable=False)
+    route_id = Column(UUID(as_uuid=True), ForeignKey("routes.id", ondelete="SET NULL"), nullable=True)
     direction = Column(String(50), default="INBOUND", nullable=False)
     origin = Column(String(255), nullable=False)
     destination_port = Column(String(255), nullable=False)
@@ -28,3 +29,4 @@ class CargoFlowModel(Base):
     scenario = relationship("ScenarioModel", back_populates="cargo_flows")
     tenant = relationship("TenantModel")
     commodity = relationship("CommodityModel")
+    route = relationship("RouteModel")

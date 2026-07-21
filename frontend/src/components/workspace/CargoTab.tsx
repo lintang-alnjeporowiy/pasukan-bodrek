@@ -162,6 +162,7 @@ export const CargoTab: React.FC<CargoTabProps> = ({
         direction={cargo.flowDirection}
         tenantId={cargo.flowTenantId}
         commodityId={cargo.flowCommodityId}
+        routeId={cargo.flowRouteId}
         origin={cargo.flowOrigin}
         destination={cargo.flowDestination}
         demand={cargo.flowDemand}
@@ -174,9 +175,11 @@ export const CargoTab: React.FC<CargoTabProps> = ({
         saving={cargo.flowSaving}
         tenants={cargo.tenants}
         commodities={cargo.commodities}
+        routes={cargo.routes}
         onClose={() => cargo.setIsFlowModalOpen(false)}
         setTenantId={cargo.setFlowTenantId}
         setCommodityId={cargo.setFlowCommodityId}
+        setRouteId={cargo.setFlowRouteId}
         setOrigin={cargo.setFlowOrigin}
         setDestination={cargo.setFlowDestination}
         setDemand={cargo.setFlowDemand}
@@ -187,6 +190,7 @@ export const CargoTab: React.FC<CargoTabProps> = ({
         setIsActive={cargo.setFlowActive}
         onSave={cargo.handleSaveFlow}
       />
+
 
       <DemandProjectionModal
         flow={cargo.selectedFlowForProjection}

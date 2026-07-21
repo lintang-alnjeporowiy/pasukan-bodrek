@@ -90,11 +90,17 @@ Known Issues:
 
 # Phase 5 — Ports and Routes
 
-- [ ] Step 5.1 — Port Master Data
-- [ ] Step 5.2 — Bathymetry Profiles
-- [ ] Step 5.3 — Bathymetry Visualization
-- [ ] Step 5.4 — Route
-- [ ] Step 5.5 — Assign Route to Cargo Flow
+- [x] Step 5.1 — Port Master Data (Study Port)
+- [x] Step 5.2 — External Ports (Global Master Reusable Ports)
+- [x] Step 5.3 — Bathymetry Profiles (Study Port Bathymetry)
+- [ ] Step 5.4 — Bathymetry Visualization
+- [x] Step 5.5 — Route
+- [x] Step 5.6 — Assign Route to Cargo Flow
+
+
+
+
+
 
 ---
 

@@ -1,5 +1,6 @@
 import React from "react";
 import { CargoFlow, Tenant, Commodity } from "@/types/cargo";
+import { Route } from "@/types/route";
 
 interface CargoFlowModalProps {
   isOpen: boolean;
@@ -7,6 +8,7 @@ interface CargoFlowModalProps {
   direction: string;
   tenantId: string;
   commodityId: string;
+  routeId?: string;
   origin: string;
   destination: string;
   demand: string;
@@ -19,9 +21,11 @@ interface CargoFlowModalProps {
   saving: boolean;
   tenants: Tenant[];
   commodities: Commodity[];
+  routes: Route[];
   onClose: () => void;
   setTenantId: (v: string) => void;
   setCommodityId: (v: string) => void;
+  setRouteId: (v: string) => void;
   setOrigin: (v: string) => void;
   setDestination: (v: string) => void;
   setDemand: (v: string) => void;
@@ -39,6 +43,7 @@ export const CargoFlowModal: React.FC<CargoFlowModalProps> = ({
   direction,
   tenantId,
   commodityId,
+  routeId = "",
   origin,
   destination,
   demand,
@@ -51,9 +56,11 @@ export const CargoFlowModal: React.FC<CargoFlowModalProps> = ({
   saving,
   tenants,
   commodities,
+  routes = [],
   onClose,
   setTenantId,
   setCommodityId,
+  setRouteId,
   setOrigin,
   setDestination,
   setDemand,
@@ -67,6 +74,7 @@ export const CargoFlowModal: React.FC<CargoFlowModalProps> = ({
   if (!isOpen) return null;
 
   const isOutbound = direction === "OUTBOUND";
+  const availableRoutes = routes.filter((r) => r.is_active && r.direction.toUpperCase() === direction.toUpperCase());
 
   return (
     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -124,6 +132,27 @@ export const CargoFlowModal: React.FC<CargoFlowModalProps> = ({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-slate-400 mb-1">
+              Rute Pelayaran (Assign Route)
+            </label>
+            <select
+              value={routeId}
+              onChange={(e) => setRouteId(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-cyan-500"
+            >
+              <option value="">-- Tanpa Rute / Pilih Nanti --</option>
+              {availableRoutes.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name} ({r.distance_nm} NM - {r.external_port_name || "External Port"})
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-slate-500 mt-1 block">
+              Menampilkan rute aktif dengan arah {direction}.
+            </span>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
