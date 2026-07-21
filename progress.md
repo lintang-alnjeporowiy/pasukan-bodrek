@@ -106,11 +106,14 @@ Known Issues:
 
 # Phase 6 — Fleet Master Data and Candidates
 
-- [ ] Step 6.1 — Ship Master Data
-- [ ] Step 6.2 — Commodity–Vessel Compatibility
-- [ ] Step 6.3 — Port–Vessel Compatibility
-- [ ] Step 6.4 — Candidate Set
-- [ ] Step 6.5 — Manual Ship Selection
+- [x] Step 6.1 — Ship Master Data
+- [x] Step 6.2 — Commodity–Vessel Compatibility
+- [x] Step 6.3 — Port–Vessel Compatibility
+- [x] Step 6.4 — Candidate Set
+- [x] Step 6.5 — Manual Ship Selection
+
+
+
 
 ---
 

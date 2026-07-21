@@ -9,6 +9,9 @@ from src.api.routes.study_port import router as study_port_router
 from src.api.routes.external_port import router as external_port_router
 from src.api.routes.bathymetry import router as bathymetry_router
 from src.api.routes.route import router as route_router
+from src.api.routes.vessel import router as vessel_router
+from src.api.routes.commodity_vessel_compatibility import router as commodity_vessel_compatibility_router
+from src.api.routes.candidate_generation import router as candidate_generation_router
 
 __all__ = [
     "project_router",
@@ -22,4 +25,10 @@ __all__ = [
     "external_port_router",
     "bathymetry_router",
     "route_router",
+    "vessel_router",
+    "commodity_vessel_compatibility_router",
+    "candidate_generation_router",
 ]
+
+
+

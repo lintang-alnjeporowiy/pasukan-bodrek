@@ -29,6 +29,9 @@ from src.api.routes import (
     external_port_router,
     bathymetry_router,
     route_router,
+    vessel_router,
+    commodity_vessel_compatibility_router,
+    candidate_generation_router,
 )
 app.include_router(project_router)
 app.include_router(scenario_router)
@@ -41,6 +44,12 @@ app.include_router(study_port_router)
 app.include_router(external_port_router)
 app.include_router(bathymetry_router)
 app.include_router(route_router)
+app.include_router(vessel_router)
+app.include_router(commodity_vessel_compatibility_router)
+app.include_router(candidate_generation_router)
+
+
+
 
 @app.get("/health")
 def health_check():

@@ -9,6 +9,9 @@ from src.infrastructure.database.models.study_port import StudyPortModel
 from src.infrastructure.database.models.external_port import ExternalPortModel
 from src.infrastructure.database.models.bathymetry import BathymetryProfileModel, BathymetryPointModel
 from src.infrastructure.database.models.route import RouteModel
+from src.infrastructure.database.models.vessel import VesselModel
+from src.infrastructure.database.models.commodity_vessel_compatibility import CommodityVesselCompatibilityModel
+from src.infrastructure.database.models.scenario_vessel_candidate import ScenarioVesselCandidateModel
 
 __all__ = [
     "ProjectModel",
@@ -24,4 +27,10 @@ __all__ = [
     "BathymetryProfileModel",
     "BathymetryPointModel",
     "RouteModel",
+    "VesselModel",
+    "CommodityVesselCompatibilityModel",
+    "ScenarioVesselCandidateModel",
 ]
+
+
+

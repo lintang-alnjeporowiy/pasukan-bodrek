@@ -30,7 +30,11 @@ export const Header: React.FC<HeaderProps> = ({ healthStatus = "connected" }) =>
           <Link href="/external-ports" className="px-3 py-1.5 rounded-xl hover:bg-slate-900 text-slate-300 hover:text-cyan-400 transition">
             Pelabuhan Eksternal
           </Link>
+          <Link href="/vessels" className="px-3 py-1.5 rounded-xl hover:bg-slate-900 text-slate-300 hover:text-cyan-400 transition">
+            Kapal Master
+          </Link>
         </nav>
+
       </div>
 
       <div className="flex items-center gap-4">
