@@ -54,11 +54,12 @@ export const cargoService = {
     description?: string;
     is_active?: boolean;
   }): Promise<Tenant> {
-    return apiFetch<Tenant>("/tenants", {
+    return apiFetch<Tenant>(`/projects/${data.project_id}/tenants`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
+
 
   async updateTenant(
     id: string,
@@ -102,12 +103,11 @@ export const cargoService = {
     maximum_demand: number;
     is_active?: boolean;
   }): Promise<CargoFlow> {
-    return apiFetch<CargoFlow>("/cargo-flows", {
+    return apiFetch<CargoFlow>(`/scenarios/${data.scenario_id}/cargo-flows`, {
       method: "POST",
       body: JSON.stringify(data),
     });
   },
-
 
   async updateCargoFlow(
     id: string,
@@ -127,8 +127,7 @@ export const cargoService = {
 
   // Demand Projection
   async calculateDemandProjection(cargoFlowId: string): Promise<ProjectionResult> {
-    return apiFetch<ProjectionResult>(`/cargo-flows/${cargoFlowId}/projections`, {
-      method: "POST",
-    });
+    return apiFetch<ProjectionResult>(`/cargo-flows/${cargoFlowId}/projection`);
   },
+
 };

@@ -27,7 +27,8 @@ export const CargoTab: React.FC<CargoTabProps> = ({
 
   const subTabs = [
     { id: "commodities", label: "Master Commodities", description: "Katalog jenis komoditas kargo", status: "Done" },
-    { id: "tenants", label: "Tenants Master", description: "Daftar tenant pelabuhan pengirim/penerima", status: "Done font-bold" },
+    { id: "tenants", label: "Tenants Master", description: "Daftar tenant pelabuhan pengirim/penerima", status: "Done" },
+
     { id: "inbound", label: "Inbound Cargo Flow", description: "Alur kargo masuk dari hinterland", status: "Done" },
     { id: "outbound", label: "Outbound Cargo Flow", description: "Alur kargo keluar ke destinasi", status: "Done" },
     { id: "conversion", label: "Conversion Rules", description: "Aturan konversi satuan kargo & live playground", status: "Done" },
